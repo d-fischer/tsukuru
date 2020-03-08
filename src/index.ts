@@ -109,8 +109,8 @@ export function compile(parsedCmd: ts.ParsedCommandLine) {
 	});
 
 	const esmEmitResult = esmProgram.emit(undefined, undefined, undefined, undefined, {
-		before: [transform()],
-		after: [],
+		before: [],
+		after: [transform()],
 		afterDeclarations: []
 	});
 
