@@ -1,19 +1,27 @@
 {
-  "name": "@d-fischer/ts-hybrid-build",
+  "name": "ts-hybrid-esm-build",
   "version": "0.0.0",
-  "description": "",
-  "keywords": [],
+  "description": "Enables you to build a TypeScript package that's compatible with both CommonJS and ES Modules",
+  "keywords": ["esm", "typescript", "hybrid"],
   "main": "lib",
   "types": "lib",
+  "bin": "lib/cli.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/d-fischer/ts-hybrid-build.git"
+    "url": "https://github.com/d-fischer/ts-hybrid-esm-build.git"
   },
   "author": "Daniel Fischer <daniel@d-fischer.dev>",
   "license": "MIT",
   "dependencies": {
+    "@oclif/command": "^1.5.19",
+    "@oclif/config": "^1.14.0",
+    "@oclif/errors": "^1.2.2",
+    "@oclif/plugin-help": "^2.2.3",
     "@types/node": "^12.12.14",
-    "tslib": "^1.10.0"
+    "@types/rimraf": "^2.0.3",
+    "chalk": "^3.0.0",
+    "tslib": "^1.10.0",
+    "typescript": "~3.8.2"
   },
   "devDependencies": {
     "@d-fischer/eslint-config": "^1.0.3",
@@ -21,8 +29,7 @@
     "husky": "^3.1.0",
     "lint-staged": "^9.5.0",
     "prettier": "^1.19.1",
-    "rimraf": "^3.0.0",
-    "typescript": "~3.7.2"
+    "rimraf": "^3.0.2"
   },
   "files": [
     "LICENSE",
