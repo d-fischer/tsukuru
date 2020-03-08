@@ -1,8 +1,12 @@
 {
   "name": "ts-hybrid-esm-build",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Enables you to build a TypeScript package that's compatible with both CommonJS and ES Modules",
-  "keywords": ["esm", "typescript", "hybrid"],
+  "keywords": [
+    "esm",
+    "typescript",
+    "hybrid"
+  ],
   "main": "lib",
   "types": "lib",
   "bin": "lib/cli.js",
