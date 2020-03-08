@@ -1,0 +1,19 @@
+language: node_js
+
+dist: xenial
+
+node_js:
+    - "10"
+    - "12"
+    - "13"
+
+cache: yarn
+
+if: tag IS blank
+
+script:
+    - set -e
+    - yarn run lint
+    - yarn run prettier:check
+    - yarn run build
+    - set +e

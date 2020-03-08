@@ -1,0 +1,58 @@
+{
+  "name": "LIBRARY_NAME",
+  "version": "0.0.0",
+  "description": "",
+  "keywords": [],
+  "main": "lib",
+  "module": "es",
+  "types": "lib",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/d-fischer/LIBRARY_NAME.git"
+  },
+  "author": "Daniel Fischer <daniel@d-fischer.dev>",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^12.12.14",
+    "tslib": "^1.10.0"
+  },
+  "devDependencies": {
+    "@d-fischer/eslint-config": "^1.0.3",
+    "eslint": "^6.7.1",
+    "husky": "^3.1.0",
+    "lint-staged": "^9.5.0",
+    "prettier": "^1.19.1",
+    "rimraf": "^3.0.0",
+    "typescript": "~3.7.2"
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "lib",
+    "es"
+  ],
+  "scripts": {
+    "lint": "eslint --ext ts src",
+    "prettier:check": "prettier --check 'src/**'",
+    "prettier:fix": "prettier --write 'src/**'",
+    "build": "yarn run build:cjs && yarn run build:esm",
+    "build:cjs": "tsc",
+    "build:esm": "tsc --project tsconfig.esm.json",
+    "rebuild": "rimraf lib es && yarn run build"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,json}": [
+      "prettier --write",
+      "git add"
+    ],
+    "*.{ts}": [
+      "eslint --fix",
+      "git add"
+    ]
+  }
+}
