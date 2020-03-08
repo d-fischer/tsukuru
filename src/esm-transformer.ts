@@ -27,7 +27,10 @@ function importExportVisitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
 		if (importPath) {
 			if (importPath.startsWith('./') || importPath.startsWith('../')) {
 				let transformedPath = importPath;
-				const sourceFile = node.getSourceFile();
+				let sourceFile: ts.SourceFile | undefined = node.getSourceFile();
+				if (!sourceFile && ts.isExportDeclaration(node)) {
+					sourceFile = node.moduleSpecifier?.getSourceFile();
+				}
 				if (sourceFile) {
 					const result = ts.resolveModuleName(importPath, sourceFile.fileName, ctx.getCompilerOptions(), {
 						fileExists,
