@@ -86,6 +86,7 @@ export function compile(parsedCmd: ts.ParsedCommandLine) {
 
 	console.log('[ESM] Compiling...');
 
+	// HACK: there's no API for this so we have to monkey patch a private TS API
 	// @ts-ignore
 	const origOutputPath = ts.getOwnEmitOutputFilePath;
 	// @ts-ignore
