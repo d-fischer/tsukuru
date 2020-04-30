@@ -37,7 +37,7 @@ function importExportVisitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
 						readFile
 					});
 					if (result.resolvedModule) {
-						transformedPath = path.relative(
+						transformedPath = path.posix.relative(
 							path.dirname(sourceFile.fileName),
 							result.resolvedModule.resolvedFileName
 						);
