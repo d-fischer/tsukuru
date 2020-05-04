@@ -1,5 +1,6 @@
 import * as ts from 'typescript';
-import { transformModulePaths } from './esm-transformer';
+import { hoistExports } from './transformers/hoistExports';
+import { resolveModulePaths } from './transformers/resolveModulePaths';
 import { createGetCanonicalFileName, exit } from './util';
 
 const sysFormatDiagnosticsHost = {
@@ -59,7 +60,7 @@ export function compile(parsedCmd: ts.ParsedCommandLine) {
 
 	const cjsEmitResult = cjsProgram.emit(undefined, undefined, undefined, undefined, {
 		before: [],
-		after: [],
+		after: [hoistExports(cjsProgram)],
 		afterDeclarations: []
 	});
 
@@ -106,7 +107,7 @@ export function compile(parsedCmd: ts.ParsedCommandLine) {
 
 	const esmEmitResult = esmProgram.emit(undefined, undefined, undefined, undefined, {
 		before: [],
-		after: [transformModulePaths()],
+		after: [resolveModulePaths()],
 		afterDeclarations: []
 	});
 

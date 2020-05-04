@@ -13,7 +13,7 @@ function readFile(fileName: string): string | undefined {
 	return ts.sys.readFile(fileName);
 }
 
-export function transformModulePaths(): ts.TransformerFactory<ts.SourceFile> {
+export function resolveModulePaths(): ts.TransformerFactory<ts.SourceFile> {
 	return (ctx: ts.TransformationContext) => {
 		const visitor: ts.Visitor = node => {
 			let importPath: string | undefined;
