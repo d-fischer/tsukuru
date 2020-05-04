@@ -1,11 +1,6 @@
 import * as ts from 'typescript';
-import { transform } from './esm-transformer';
+import { transformModulePaths } from './esm-transformer';
 import { createGetCanonicalFileName, exit } from './util';
-
-declare module 'typescript' {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	function getOwnEmitOutputFilePath(fileName: string, host: any, extension: string): string;
-}
 
 const sysFormatDiagnosticsHost = {
 	getCurrentDirectory: function() {
@@ -111,7 +106,7 @@ export function compile(parsedCmd: ts.ParsedCommandLine) {
 
 	const esmEmitResult = esmProgram.emit(undefined, undefined, undefined, undefined, {
 		before: [],
-		after: [transform()],
+		after: [transformModulePaths()],
 		afterDeclarations: []
 	});
 

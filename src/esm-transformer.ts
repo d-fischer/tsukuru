@@ -13,62 +13,64 @@ function readFile(fileName: string): string | undefined {
 	return ts.sys.readFile(fileName);
 }
 
-function importExportVisitor(ctx: ts.TransformationContext, sf: ts.SourceFile) {
-	const visitor: ts.Visitor = (node: ts.Node): ts.Node => {
-		let importPath: string | undefined;
-		if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier) {
-			const importPathWithQuotes = node.moduleSpecifier.getText(sf);
-			importPath = importPathWithQuotes.substr(1, importPathWithQuotes.length - 2);
-		} else if (isDynamicImport(node)) {
-			const importPathWithQuotes = node.arguments[0].getText(sf);
-			importPath = importPathWithQuotes.substr(1, importPathWithQuotes.length - 2);
-		}
-
-		if (importPath) {
-			if (importPath.startsWith('./') || importPath.startsWith('../')) {
-				let transformedPath = importPath;
-				let sourceFile: ts.SourceFile | undefined = node.getSourceFile();
-				if (!sourceFile && (ts.isExportDeclaration(node) || ts.isImportDeclaration(node))) {
-					sourceFile = node.moduleSpecifier?.getSourceFile();
-				}
-				if (sourceFile) {
-					const result = ts.resolveModuleName(importPath, sourceFile.fileName, ctx.getCompilerOptions(), {
-						fileExists,
-						readFile
-					});
-					if (result.resolvedModule) {
-						transformedPath = path.posix.relative(
-							path.dirname(sourceFile.fileName),
-							result.resolvedModule.resolvedFileName
-						);
-						transformedPath =
-							transformedPath.startsWith('./') || transformedPath.startsWith('../')
-								? transformedPath
-								: `./${transformedPath}`;
-						transformedPath = transformedPath.replace(/\.ts$/, '.mjs');
-					}
-				}
-				if (transformedPath !== importPath) {
-					const newNode = ts.getMutableClone(node);
-					if (ts.isImportDeclaration(newNode) || ts.isExportDeclaration(newNode)) {
-						newNode.moduleSpecifier = ts.createLiteral(transformedPath);
-					} else if (isDynamicImport(newNode)) {
-						newNode.arguments = ts.createNodeArray([ts.createStringLiteral(transformedPath)]);
-					}
-
-					ts.setSourceMapRange(newNode, ts.getSourceMapRange(node));
-
-					return newNode;
+export function transformModulePaths(): ts.TransformerFactory<ts.SourceFile> {
+	return (ctx: ts.TransformationContext) => {
+		const visitor: ts.Visitor = node => {
+			let importPath: string | undefined;
+			if (
+				(ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+				node.moduleSpecifier &&
+				ts.isStringLiteral(node.moduleSpecifier)
+			) {
+				importPath = node.moduleSpecifier.text;
+			} else if (isDynamicImport(node)) {
+				const importArg = node.arguments[0];
+				if (ts.isStringLiteral(importArg)) {
+					importPath = importArg.text;
 				}
 			}
-		}
-		return ts.visitEachChild(node, visitor, ctx);
+
+			if (importPath) {
+				if (importPath.startsWith('./') || importPath.startsWith('../')) {
+					let transformedPath = importPath;
+					let sourceFile: ts.SourceFile | undefined = node.getSourceFile();
+					if (!sourceFile && (ts.isExportDeclaration(node) || ts.isImportDeclaration(node))) {
+						sourceFile = node.moduleSpecifier?.getSourceFile();
+					}
+					if (sourceFile) {
+						const result = ts.resolveModuleName(importPath, sourceFile.fileName, ctx.getCompilerOptions(), {
+							fileExists,
+							readFile
+						});
+						if (result.resolvedModule) {
+							transformedPath = path.posix.relative(
+								path.dirname(sourceFile.fileName),
+								result.resolvedModule.resolvedFileName
+							);
+							transformedPath =
+								transformedPath.startsWith('./') || transformedPath.startsWith('../')
+									? transformedPath
+									: `./${transformedPath}`;
+							transformedPath = transformedPath.replace(/\.ts$/, '.mjs');
+						}
+					}
+					if (transformedPath !== importPath) {
+						const newNode = ts.getMutableClone(node);
+						if (ts.isImportDeclaration(newNode) || ts.isExportDeclaration(newNode)) {
+							newNode.moduleSpecifier = ts.createLiteral(transformedPath);
+						} else if (isDynamicImport(newNode)) {
+							newNode.arguments = ts.createNodeArray([ts.createStringLiteral(transformedPath)]);
+						}
+
+						ts.setSourceMapRange(newNode, ts.getSourceMapRange(node));
+
+						return newNode;
+					}
+				}
+			}
+			return ts.visitEachChild(node, visitor, ctx);
+		};
+
+		return node => ts.visitNode(node, visitor);
 	};
-
-	return visitor;
-}
-
-export function transform(): ts.TransformerFactory<ts.SourceFile> {
-	return (ctx: ts.TransformationContext): ts.Transformer<ts.SourceFile> => (sf: ts.SourceFile) =>
-		ts.visitNode(sf, importExportVisitor(ctx, sf));
 }
