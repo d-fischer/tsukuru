@@ -4,7 +4,12 @@
   "description": "Enables you to build a TypeScript package that's compatible with both CommonJS and ES Modules",
   "keywords": [
     "esm",
+    "module",
+    "commonjs",
     "typescript",
+    "tsc",
+    "library",
+    "package",
     "hybrid"
   ],
   "main": "lib",
