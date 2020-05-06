@@ -15,6 +15,7 @@
     "url": "https://github.com/d-fischer/tsukeru.git"
   },
   "author": "Daniel Fischer <daniel@d-fischer.dev>",
+  "funding": "https://github.com/sponsors/d-fischer",
   "license": "MIT",
   "dependencies": {
     "@oclif/command": "^1.5.19",
