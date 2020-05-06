@@ -1,5 +1,5 @@
 {
-  "name": "ts-hybrid-esm-build",
+  "name": "tsukeru",
   "version": "0.2.3",
   "description": "Enables you to build a TypeScript package that's compatible with both CommonJS and ES Modules",
   "keywords": [
@@ -12,7 +12,7 @@
   "bin": "lib/cli.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/d-fischer/ts-hybrid-esm-build.git"
+    "url": "https://github.com/d-fischer/tsukeru.git"
   },
   "author": "Daniel Fischer <daniel@d-fischer.dev>",
   "license": "MIT",
