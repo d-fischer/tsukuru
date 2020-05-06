@@ -4,6 +4,10 @@ import { resolveModulePaths } from './transformers/resolveModulePaths';
 import { splitEnumExports } from './transformers/splitEnumExports';
 import { createGetCanonicalFileName, exit } from './util';
 
+export interface WrapperOptions {
+	useCjsTransformers?: boolean;
+}
+
 const sysFormatDiagnosticsHost = {
 	getCurrentDirectory: function() {
 		return ts.sys.getCurrentDirectory();
@@ -49,7 +53,7 @@ export function parseCmdLine(configFilePath: string) {
 	return ts.getParsedCommandLineOfConfigFile(configFilePath, {}, configHost)!;
 }
 
-export function compile(parsedCmd: ts.ParsedCommandLine) {
+export function compile(parsedCmd: ts.ParsedCommandLine, { useCjsTransformers }: WrapperOptions) {
 	const { options, fileNames } = parsedCmd;
 
 	console.log('[CJS] Compiling...');
@@ -59,11 +63,19 @@ export function compile(parsedCmd: ts.ParsedCommandLine) {
 		options
 	});
 
-	const cjsEmitResult = cjsProgram.emit(undefined, undefined, undefined, undefined, {
-		before: [splitEnumExports()],
-		after: [hoistExports(cjsProgram)],
-		afterDeclarations: []
-	});
+	const cjsEmitResult = cjsProgram.emit(
+		undefined,
+		undefined,
+		undefined,
+		undefined,
+		useCjsTransformers
+			? {
+					before: [splitEnumExports()],
+					after: [hoistExports(cjsProgram)],
+					afterDeclarations: []
+			  }
+			: undefined
+	);
 
 	ts.getPreEmitDiagnostics(cjsProgram)
 		.concat(cjsEmitResult.diagnostics)

@@ -46,6 +46,11 @@ Assuming that your `outDir` is `lib`. The output directory of the ES Modules is 
 
 Specifies the path to your TypeScript configuration file (`tsconfig.json`). If none is given, `ts-hybrid-esm-build` will traverse the ancestors of your project directory until it finds a file named `tsconfig.json`.
 
+### -R, --no-cjs-root-export
+
+Disables the use pf `require('pkg')` as a shortcut to the default export. Consumers must use `require('pkg').default` instead.
+This may considerably decrease you're package's total size.
+
 ### --clean
 
 Removes the output directories before building.

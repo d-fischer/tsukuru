@@ -4,7 +4,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as _rimraf from 'rimraf';
 import { promisify } from 'util';
-import { compile, parseCmdLine } from './index';
+import { compile, parseCmdLine, WrapperOptions } from './index';
 import { exit } from './util';
 
 const rimraf = promisify(_rimraf);
@@ -34,10 +34,13 @@ class Builder extends Command {
 	static flags = {
 		version: flags.version(),
 		help: flags.help(),
-		configFile: flags.string({
+		'config-file': flags.string({
 			char: 'c',
-			name: 'config-file',
 			description: 'Path to a tsconfig.json file.'
+		}),
+		'no-cjs-root-export': flags.boolean({
+			char: 'R',
+			description: "Disable require('pkg') as a shortcut to the package's root export"
 		}),
 		clean: flags.boolean({
 			description: 'Remove the output files before building'
@@ -46,7 +49,7 @@ class Builder extends Command {
 
 	async run(): Promise<void> {
 		const { flags: usedFlags } = this.parse(Builder);
-		const configFilePath = usedFlags.configFile ?? (await findConfigFile());
+		const configFilePath = usedFlags['config-file'] ?? (await findConfigFile());
 		const parsedCmd = parseCmdLine(configFilePath);
 		if (usedFlags.clean) {
 			console.log('Cleaning up...');
@@ -57,7 +60,10 @@ class Builder extends Command {
 			}
 			await rimraf(path.join(configDir, 'es'));
 		}
-		compile(parsedCmd);
+		const options: WrapperOptions = {
+			useCjsTransformers: !usedFlags['no-cjs-root-export']
+		};
+		compile(parsedCmd, options);
 	}
 }
 
