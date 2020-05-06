@@ -1,6 +1,6 @@
 {
   "name": "tsukeru",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Enables you to build a TypeScript package that's compatible with both CommonJS and ES Modules",
   "keywords": [
     "esm",
