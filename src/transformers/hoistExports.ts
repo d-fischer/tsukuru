@@ -8,30 +8,30 @@ export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.Sour
 			: ts.NodeFlags.None;
 	return (ctx: ts.TransformationContext) => {
 		let level = 0;
-		const hoisted: ts.Statement[][] = [];
-		const moduleIntro: ts.Statement[][] = [];
+		const exportsByLevel: ts.Statement[][] = [];
+		const moduleIntroByLevel: ts.Statement[][] = [];
 		const levelUp = () => {
 			++level;
-			hoisted[level]?.splice(0, hoisted[level].length);
-			moduleIntro[level]?.splice(0, moduleIntro[level].length);
+			exportsByLevel[level]?.splice(0, exportsByLevel[level].length);
+			moduleIntroByLevel[level]?.splice(0, moduleIntroByLevel[level].length);
 		};
 		const levelDown = () => --level;
-		const hoistExport = (node: ts.Statement) => {
-			if (hoisted[level]) {
-				hoisted[level].push(node);
+		const addExport = (node: ts.Statement) => {
+			if (exportsByLevel[level]) {
+				exportsByLevel[level].push(node);
 			} else {
-				hoisted[level] = [node];
+				exportsByLevel[level] = [node];
 			}
 		};
-		const hoistModuleIntro = (node: ts.Statement, prepend: boolean = false) => {
-			if (moduleIntro[level]) {
+		const addModuleIntro = (node: ts.Statement, prepend: boolean = false) => {
+			if (moduleIntroByLevel[level]) {
 				if (prepend) {
-					moduleIntro[level].unshift(node);
+					moduleIntroByLevel[level].unshift(node);
 				} else {
-					moduleIntro[level].push(node);
+					moduleIntroByLevel[level].push(node);
 				}
 			} else {
-				moduleIntro[level] = [node];
+				moduleIntroByLevel[level] = [node];
 			}
 		};
 
@@ -65,20 +65,20 @@ export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.Sour
 			expression.kind === ts.SyntaxKind.TrueKeyword ||
 			expression.kind === ts.SyntaxKind.FalseKeyword;
 
-		/* eslint-enable no-bitwise */
 		const visitor: ts.Visitor = node => {
 			levelUp();
 
 			let result = ts.visitEachChild(node, visitor, ctx);
 
-			if (hoisted[level]?.length || moduleIntro[level]?.length) {
-				const hoistedStatements = hoisted[level] ?? [];
-				const hoistedModuleIntro = moduleIntro[level] ?? [];
-				const others = (result as ts.Block).statements.filter(
-					s => !hoistedStatements.includes(s) && !hoistedModuleIntro.includes(s)
-				);
+			if (exportsByLevel[level]?.length || moduleIntroByLevel[level]?.length) {
+				const addedExports = exportsByLevel[level] ?? [];
+				const addedModuleIntro = moduleIntroByLevel[level] ?? [];
 				const newResult = ts.getMutableClone(result) as ts.Block;
-				newResult.statements = ts.createNodeArray([...others, ...hoistedModuleIntro, ...hoistedStatements]);
+				newResult.statements = ts.createNodeArray([
+					...(result as ts.Block).statements,
+					...addedModuleIntro,
+					...addedExports
+				]);
 				ts.setSourceMapRange(newResult, ts.getSourceMapRange(result));
 
 				result = newResult;
@@ -86,73 +86,73 @@ export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.Sour
 
 			levelDown();
 
-			if (
-				ts.isExpressionStatement(result) &&
-				ts.isCallExpression(result.expression) &&
-				ts.isPropertyAccessExpression(result.expression.expression) &&
-				ts.isIdentifier(result.expression.expression.expression) &&
-				result.expression.expression.expression.text === 'Object' &&
-				ts.isIdentifier(result.expression.expression.name) &&
-				result.expression.expression.name.text === 'defineProperty'
-			) {
-				const [exportsArg, nameArg] = result.expression.arguments;
-				if (
-					ts.isIdentifier(exportsArg) &&
-					exportsArg.text === 'exports' &&
-					ts.isStringLiteral(nameArg) &&
-					nameArg.text === '__esModule'
-				) {
-					hoistModuleIntro(result);
-					return undefined;
-				}
-			}
-
-			if (
-				ts.isExpressionStatement(result) &&
-				ts.isBinaryExpression(result.expression) &&
-				ts.isPropertyAccessExpression(result.expression.left) &&
-				ts.isIdentifier(result.expression.left.expression) &&
-				result.expression.left.expression.text === 'exports'
-			) {
-				if (result.expression.left.name.text === 'default') {
-					let exportedExpression: ts.Expression;
-					let creation: ts.VariableStatement | undefined;
-					if (canHoistCreation(result.expression.right)) {
-						exportedExpression = result.expression.right;
-					} else {
-						({ identifier: exportedExpression, creation } = createDefaultExportProxyConstant(
-							result.expression.right
-						));
-						result.expression = ts.createIdentifier('__defaultExport');
+			if (ts.isExpressionStatement(result)) {
+				if (ts.isCallExpression(result.expression)) {
+					if (
+						ts.isPropertyAccessExpression(result.expression.expression) &&
+						ts.isIdentifier(result.expression.expression.expression) &&
+						result.expression.expression.expression.text === 'Object' &&
+						ts.isIdentifier(result.expression.expression.name) &&
+						result.expression.expression.name.text === 'defineProperty'
+					) {
+						const [exportsArg, nameArg] = result.expression.arguments;
+						if (
+							ts.isIdentifier(exportsArg) &&
+							exportsArg.text === 'exports' &&
+							ts.isStringLiteral(nameArg) &&
+							nameArg.text === '__esModule'
+						) {
+							addModuleIntro(ts.getMutableClone(result));
+						}
 					}
-					const rootExport = createRootExport(exportedExpression);
+				} else if (
+					ts.isBinaryExpression(result.expression) &&
+					ts.isPropertyAccessExpression(result.expression.left) &&
+					ts.isIdentifier(result.expression.left.expression) &&
+					result.expression.left.expression.text === 'exports'
+				) {
+					if (result.expression.left.name.text === 'default') {
+						let exportedExpression: ts.Expression;
+						let creation: ts.VariableStatement | undefined;
+						let defaultExport = result;
+						if (canHoistCreation(result.expression.right)) {
+							exportedExpression = result.expression.right;
+						} else {
+							({ identifier: exportedExpression, creation } = createDefaultExportProxyConstant(
+								result.expression.right
+							));
+							defaultExport = ts.getMutableClone(result);
+							defaultExport.expression = ts.createIdentifier('__defaultExport');
+						}
+						const rootExport = createRootExport(exportedExpression);
 
-					hoistModuleIntro(rootExport, true);
-					hoistExport(result);
+						addModuleIntro(rootExport, true);
+						addExport(defaultExport);
 
-					return creation;
-				} else {
-					if (canHoistCreation(result.expression.right)) {
-						hoistExport(result);
+						return creation ? [creation, defaultExport] : defaultExport;
 					} else {
-						const tmpIdentifier = ts.createIdentifier(`__export_${result.expression.left.name.text}`);
-						const creation = ts.createVariableStatement(
-							undefined,
-							ts.createVariableDeclarationList(
-								[ts.createVariableDeclaration(tmpIdentifier, undefined, result.expression.right)],
-								constFlag
-							)
-						);
-						const exportAssignment = ts.createExpressionStatement(
-							ts.createBinary(
-								result.expression.left,
-								ts.createToken(ts.SyntaxKind.EqualsToken),
-								tmpIdentifier
-							)
-						);
+						if (canHoistCreation(result.expression.right)) {
+							addExport(result);
+						} else {
+							const tmpIdentifier = ts.createIdentifier(`__export_${result.expression.left.name.text}`);
+							const creation = ts.createVariableStatement(
+								undefined,
+								ts.createVariableDeclarationList(
+									[ts.createVariableDeclaration(tmpIdentifier, undefined, result.expression.right)],
+									constFlag
+								)
+							);
+							const exportAssignment = ts.createExpressionStatement(
+								ts.createBinary(
+									result.expression.left,
+									ts.createToken(ts.SyntaxKind.EqualsToken),
+									tmpIdentifier
+								)
+							);
 
-						hoistExport(exportAssignment);
-						return creation;
+							addExport(exportAssignment);
+							return [creation, exportAssignment];
+						}
 					}
 				}
 			}

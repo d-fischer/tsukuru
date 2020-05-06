@@ -1,6 +1,7 @@
 import * as ts from 'typescript';
 import { hoistExports } from './transformers/hoistExports';
 import { resolveModulePaths } from './transformers/resolveModulePaths';
+import { splitEnumExports } from './transformers/splitEnumExports';
 import { createGetCanonicalFileName, exit } from './util';
 
 const sysFormatDiagnosticsHost = {
@@ -59,7 +60,7 @@ export function compile(parsedCmd: ts.ParsedCommandLine) {
 	});
 
 	const cjsEmitResult = cjsProgram.emit(undefined, undefined, undefined, undefined, {
-		before: [],
+		before: [splitEnumExports()],
 		after: [hoistExports(cjsProgram)],
 		afterDeclarations: []
 	});
