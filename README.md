@@ -1,8 +1,8 @@
-# 🔨 tsukeru
+# 🔨 tsukuru
 
 This package enables you to build a TypeScript package that's compatible with both CommonJS and ES Modules - **without writing any duplicate code!**
 
-| Consumer environment           | compiled by `tsc`                                                                              | compiled by `tsukeru`             |
+| Consumer environment           | compiled by `tsc`                                                                              | compiled by `tsukuru`             |
 |--------------------------------|------------------------------------------------------------------------------------------------|-----------------------------------|
 | node, CommonJS                 | ❌ `const foo = require('foo').default`                                                         | ✔ `const foo = require('foo');`   |
 | node, native ES Modules (.mjs) | ❌ `import foo from 'foo'; foo.default();`<br>(incompatible with its own generated definitions) | ✔ `import foo from 'foo'; foo();` |
@@ -13,9 +13,9 @@ This is a heavy work in progress, **use at your own risk**!
 ## Installing
 
 ```sh
-yarn add --dev tsukeru
+yarn add --dev tsukuru
 # or
-npm install --save-dev tsukeru
+npm install --save-dev tsukuru
 ```
 
 ## Configuration of package.json
@@ -34,8 +34,8 @@ Put this (or something similar) in your package.json:
         }
     },
     "scripts": {
-        "build": "tsukeru",
-        "rebuild": "tsukeru --clean"
+        "build": "tsukuru",
+        "rebuild": "tsukuru --clean"
     }
 }
 ```
@@ -47,7 +47,7 @@ Assuming that your `outDir` is `lib`. The output directory of the ES Modules is 
 ### -c, --config-file
 
 Specifies the path to your TypeScript configuration file (`tsconfig.json`).
-If none is given, `tsukeru` will traverse your project directory and its ancestors until it finds a file named `tsconfig.json`.
+If none is given, `tsukuru` will traverse your project directory and its ancestors until it finds a file named `tsconfig.json`.
 
 ### -R, --no-cjs-root-export
 
@@ -82,4 +82,4 @@ If it doesn't, maybe make a change by sending pull requests to your favorite lib
 
 ### What does the name mean?
 
-It's Japanese for the verb "build" or "construct". It's usually written like this: 付ける
+It's Japanese for the verb "build" or "construct". It's usually written like this: 作る

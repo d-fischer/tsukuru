@@ -1,5 +1,5 @@
 {
-  "name": "tsukeru",
+  "name": "tsukuru",
   "version": "0.3.2",
   "description": "Enables you to build a TypeScript package that's compatible with both CommonJS and ES Modules",
   "keywords": [
@@ -17,7 +17,7 @@
   "bin": "lib/cli.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/d-fischer/tsukeru.git"
+    "url": "https://github.com/d-fischer/tsukuru.git"
   },
   "author": "Daniel Fischer <daniel@d-fischer.dev>",
   "funding": "https://github.com/sponsors/d-fischer",
