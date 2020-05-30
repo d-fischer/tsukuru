@@ -65,23 +65,37 @@ export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.Sour
 			expression.kind === ts.SyntaxKind.TrueKeyword ||
 			expression.kind === ts.SyntaxKind.FalseKeyword;
 
+		const sourceFileHasDefaultExport = (file: ts.SourceFile): boolean =>
+			file.statements.some(
+				node =>
+					ts.isExpressionStatement(node) &&
+					ts.isBinaryExpression(node.expression) &&
+					ts.isPropertyAccessExpression(node.expression.left) &&
+					ts.isIdentifier(node.expression.left.expression) &&
+					node.expression.left.expression.text === 'exports' &&
+					node.expression.left.name.text === 'default'
+			);
+
 		const visitor: ts.Visitor = node => {
 			levelUp();
 
-			let result = ts.visitEachChild(node, visitor, ctx);
+			let result = node;
+			if (ts.isSourceFile(node) && sourceFileHasDefaultExport(node)) {
+				result = ts.visitEachChild(node, visitor, ctx);
 
-			if (exportsByLevel[level]?.length || moduleIntroByLevel[level]?.length) {
-				const addedExports = exportsByLevel[level] ?? [];
-				const addedModuleIntro = moduleIntroByLevel[level] ?? [];
-				const newResult = ts.getMutableClone(result) as ts.Block;
-				newResult.statements = ts.createNodeArray([
-					...(result as ts.Block).statements,
-					...addedModuleIntro,
-					...addedExports
-				]);
-				ts.setSourceMapRange(newResult, ts.getSourceMapRange(result));
+				if (exportsByLevel[level]?.length || moduleIntroByLevel[level]?.length) {
+					const addedExports = exportsByLevel[level] ?? [];
+					const addedModuleIntro = moduleIntroByLevel[level] ?? [];
+					const newResult = ts.getMutableClone(result) as ts.Block;
+					newResult.statements = ts.createNodeArray([
+						...(result as ts.Block).statements,
+						...addedModuleIntro,
+						...addedExports
+					]);
+					ts.setSourceMapRange(newResult, ts.getSourceMapRange(result));
 
-				result = newResult;
+					result = newResult;
+				}
 			}
 
 			levelDown();
