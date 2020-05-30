@@ -7,7 +7,7 @@ cd "$(dirname $0)"
 
 yarn lint
 yarn prettier:check
-yarn build
+yarn rebuild
 
 VERSIONTYPE="${1:-patch}"
 npm version --preid pre ${VERSIONTYPE} -m "release version %s"
