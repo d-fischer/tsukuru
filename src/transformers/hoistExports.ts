@@ -80,22 +80,26 @@ export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.Sour
 			levelUp();
 
 			let result = node;
-			if (ts.isSourceFile(node) && sourceFileHasDefaultExport(node)) {
-				result = ts.visitEachChild(node, visitor, ctx);
+			if (ts.isSourceFile(node)) {
+				if (sourceFileHasDefaultExport(node)) {
+					result = ts.visitEachChild(node, visitor, ctx);
 
-				if (exportsByLevel[level]?.length || moduleIntroByLevel[level]?.length) {
-					const addedExports = exportsByLevel[level] ?? [];
-					const addedModuleIntro = moduleIntroByLevel[level] ?? [];
-					const newResult = ts.getMutableClone(result) as ts.Block;
-					newResult.statements = ts.createNodeArray([
-						...(result as ts.Block).statements,
-						...addedModuleIntro,
-						...addedExports
-					]);
-					ts.setSourceMapRange(newResult, ts.getSourceMapRange(result));
+					if (exportsByLevel[level]?.length || moduleIntroByLevel[level]?.length) {
+						const addedExports = exportsByLevel[level] ?? [];
+						const addedModuleIntro = moduleIntroByLevel[level] ?? [];
+						const newResult = ts.getMutableClone(result) as ts.Block;
+						newResult.statements = ts.createNodeArray([
+							...(result as ts.Block).statements,
+							...addedModuleIntro,
+							...addedExports
+						]);
+						ts.setSourceMapRange(newResult, ts.getSourceMapRange(result));
 
-					result = newResult;
+						result = newResult;
+					}
 				}
+			} else {
+				result = ts.visitEachChild(node, visitor, ctx);
 			}
 
 			levelDown();
