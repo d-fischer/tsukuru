@@ -1,7 +1,9 @@
 import * as chalk from 'chalk';
 
 export function exit(exitCode: number): never {
-	console.log(chalk.red(`Process exiting with code '${exitCode}'.`));
+	if (exitCode) {
+		console.log(chalk.red(`Process exiting with error code '${exitCode}'.`));
+	}
 	process.exit(exitCode);
 }
 
