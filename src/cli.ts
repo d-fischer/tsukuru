@@ -27,7 +27,7 @@ async function findConfigFile(): Promise<string> {
 		currentDir = newDir;
 	}
 	console.error('A tsconfig file was not found.');
-	exit(1);
+	exit(2);
 }
 
 class Builder extends Command {
@@ -63,7 +63,7 @@ class Builder extends Command {
 		const options: WrapperOptions = {
 			useCjsTransformers: !usedFlags['no-cjs-root-export']
 		};
-		compile(parsedCmd, options);
+		exit(compile(parsedCmd, options));
 	}
 }
 

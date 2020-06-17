@@ -2,7 +2,7 @@ import * as ts from 'typescript';
 import { hoistExports } from './transformers/hoistExports';
 import { resolveModulePaths } from './transformers/resolveModulePaths';
 import { splitEnumExports } from './transformers/splitEnumExports';
-import { createGetCanonicalFileName, exit } from './util';
+import { createGetCanonicalFileName } from './util';
 
 export interface WrapperOptions {
 	useCjsTransformers?: boolean;
@@ -56,6 +56,8 @@ export function parseCmdLine(configFilePath: string) {
 export function compile(parsedCmd: ts.ParsedCommandLine, { useCjsTransformers }: WrapperOptions) {
 	const { options, fileNames } = parsedCmd;
 
+	let anyDiagnostics = false;
+
 	console.log('[CJS] Compiling...');
 
 	const cjsProgram = ts.createProgram({
@@ -80,6 +82,7 @@ export function compile(parsedCmd: ts.ParsedCommandLine, { useCjsTransformers }:
 	ts.getPreEmitDiagnostics(cjsProgram)
 		.concat(cjsEmitResult.diagnostics)
 		.forEach(diagnostic => {
+			anyDiagnostics = true;
 			let msg = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
 			if (diagnostic.file) {
 				const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start!);
@@ -89,9 +92,6 @@ export function compile(parsedCmd: ts.ParsedCommandLine, { useCjsTransformers }:
 		});
 
 	const cjsExitCode = cjsEmitResult.emitSkipped ? 1 : 0;
-	if (cjsExitCode) {
-		exit(cjsExitCode);
-	}
 
 	console.log('[ESM] Compiling...');
 
@@ -127,6 +127,7 @@ export function compile(parsedCmd: ts.ParsedCommandLine, { useCjsTransformers }:
 	ts.getPreEmitDiagnostics(esmProgram)
 		.concat(esmEmitResult.diagnostics)
 		.forEach(diagnostic => {
+			anyDiagnostics = true;
 			let msg = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
 			if (diagnostic.file) {
 				const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start!);
@@ -136,10 +137,9 @@ export function compile(parsedCmd: ts.ParsedCommandLine, { useCjsTransformers }:
 		});
 
 	const esmExitCode = esmEmitResult.emitSkipped ? 1 : 0;
-	if (esmExitCode) {
-		exit(esmExitCode);
-	}
 
 	// @ts-ignore
 	ts.getOwnEmitOutputFilePath = origOutputPath;
+
+	return cjsExitCode || esmExitCode || (anyDiagnostics ? 2 : 0);
 }
