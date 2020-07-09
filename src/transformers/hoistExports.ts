@@ -140,7 +140,9 @@ export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.Sour
 								result.expression.right
 							));
 							defaultExport = ts.getMutableClone(result);
-							defaultExport.expression = ts.createIdentifier('__defaultExport');
+							(defaultExport.expression as ts.AssignmentExpression<
+								ts.AssignmentOperatorToken
+							>).right = ts.createIdentifier('__defaultExport');
 						}
 						const rootExport = createRootExport(exportedExpression);
 
