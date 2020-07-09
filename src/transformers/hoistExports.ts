@@ -62,6 +62,9 @@ export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.Sour
 		const canHoistCreation = (expression: ts.Expression): boolean =>
 			ts.isIdentifier(expression) ||
 			ts.isLiteralExpression(expression) ||
+			(ts.isPropertyAccessExpression(expression) &&
+				ts.isIdentifier(expression.expression) &&
+				ts.isIdentifier(expression.name)) ||
 			expression.kind === ts.SyntaxKind.TrueKeyword ||
 			expression.kind === ts.SyntaxKind.FalseKeyword;
 
