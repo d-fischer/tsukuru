@@ -1,4 +1,5 @@
 import * as ts from 'typescript';
+import { createDefineExportCall, createRedefineExportsCall, createRuntimeHelpers } from './helpers/runtimeHelpers';
 
 export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.SourceFile> {
 	const { target } = program.getCompilerOptions();
@@ -7,6 +8,7 @@ export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.Sour
 			? ts.NodeFlags.Const
 			: ts.NodeFlags.None;
 	return (ctx: ts.TransformationContext) => {
+		const { factory } = ctx;
 		let level = 0;
 		const exportsByLevel: ts.Statement[][] = [];
 		const moduleIntroByLevel: ts.Statement[][] = [];
@@ -36,24 +38,34 @@ export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.Sour
 		};
 
 		const createRootExport = (identifier: ts.Expression) =>
-			ts.createExpressionStatement(
-				ts.createBinary(
-					ts.createPropertyAccess(ts.createIdentifier('module'), ts.createIdentifier('exports')),
-					ts.createToken(ts.SyntaxKind.EqualsToken),
-					ts.createBinary(
-						ts.createIdentifier('exports'),
-						ts.createToken(ts.SyntaxKind.EqualsToken),
+			factory.createExpressionStatement(
+				factory.createBinaryExpression(
+					factory.createPropertyAccessExpression(
+						factory.createIdentifier('module'),
+						factory.createIdentifier('exports')
+					),
+					factory.createToken(ts.SyntaxKind.EqualsToken),
+					factory.createBinaryExpression(
+						factory.createIdentifier('exports'),
+						factory.createToken(ts.SyntaxKind.EqualsToken),
 						identifier
 					)
 				)
 			);
 
 		const createDefaultExportProxyConstant = (expr: ts.Expression) => ({
-			identifier: ts.createIdentifier('__defaultExport'),
-			creation: ts.createVariableStatement(
+			identifier: factory.createIdentifier('__defaultExport'),
+			creation: factory.createVariableStatement(
 				undefined,
-				ts.createVariableDeclarationList(
-					[ts.createVariableDeclaration(ts.createIdentifier('__defaultExport'), undefined, expr)],
+				factory.createVariableDeclarationList(
+					[
+						factory.createVariableDeclaration(
+							factory.createIdentifier('__defaultExport'),
+							undefined,
+							undefined,
+							expr
+						)
+					],
 					constFlag
 				)
 			)
@@ -79,6 +91,16 @@ export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.Sour
 					node.expression.left.name.text === 'default'
 			);
 
+		const isVoidExportInitializer = (expression: ts.Expression): boolean =>
+			ts.isBinaryExpression(expression) &&
+			ts.isPropertyAccessExpression(expression.left) &&
+			ts.isIdentifier(expression.left.expression) &&
+			expression.left.expression.text === 'exports' &&
+			((ts.isVoidExpression(expression.right) &&
+				ts.isNumericLiteral(expression.right.expression) &&
+				expression.right.expression.text === '0') ||
+				isVoidExportInitializer(expression.right));
+
 		const visitor: ts.Visitor = node => {
 			levelUp();
 
@@ -90,12 +112,22 @@ export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.Sour
 					if (exportsByLevel[level]?.length || moduleIntroByLevel[level]?.length) {
 						const addedExports = exportsByLevel[level] ?? [];
 						const addedModuleIntro = moduleIntroByLevel[level] ?? [];
-						const newResult = ts.getMutableClone(result) as ts.Block;
-						newResult.statements = ts.createNodeArray([
-							...(result as ts.Block).statements,
-							...addedModuleIntro,
-							...addedExports
-						]);
+						let index = 0;
+						const wrapperVisitor: ts.Visitor = _node => {
+							const currentIndex = index++;
+							if (currentIndex === 0) {
+								return [createRuntimeHelpers(factory, constFlag), _node];
+							} else if (currentIndex === (result as ts.SourceFile).statements.length - 1) {
+								return [
+									_node,
+									...addedModuleIntro,
+									createRedefineExportsCall(factory),
+									...addedExports
+								];
+							}
+							return _node;
+						};
+						const newResult = ts.visitEachChild(result, wrapperVisitor, ctx);
 						ts.setSourceMapRange(newResult, ts.getSourceMapRange(result));
 
 						result = newResult;
@@ -116,14 +148,17 @@ export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.Sour
 						ts.isIdentifier(result.expression.expression.name) &&
 						result.expression.expression.name.text === 'defineProperty'
 					) {
-						const [exportsArg, nameArg] = result.expression.arguments;
+						const [exportsArg, nameArg, definitionArg] = result.expression.arguments;
 						if (
 							ts.isIdentifier(exportsArg) &&
 							exportsArg.text === 'exports' &&
-							ts.isStringLiteral(nameArg) &&
-							nameArg.text === '__esModule'
+							ts.isStringLiteral(nameArg)
 						) {
-							addModuleIntro(ts.getMutableClone(result));
+							if (nameArg.text === '__esModule') {
+								addModuleIntro(factory.createExpressionStatement(result.expression));
+							} else if (ts.isObjectLiteralExpression(definitionArg)) {
+								return createDefineExportCall(nameArg, definitionArg, factory);
+							}
 						}
 					}
 				} else if (
@@ -142,10 +177,12 @@ export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.Sour
 							({ identifier: exportedExpression, creation } = createDefaultExportProxyConstant(
 								result.expression.right
 							));
-							defaultExport = ts.getMutableClone(result);
-							(defaultExport.expression as ts.AssignmentExpression<
-								ts.AssignmentOperatorToken
-							>).right = ts.createIdentifier('__defaultExport');
+							defaultExport = factory.createExpressionStatement(
+								factory.createAssignment(
+									result.expression.left,
+									factory.createIdentifier('__defaultExport')
+								)
+							);
 						}
 						const rootExport = createRootExport(exportedExpression);
 
@@ -153,22 +190,31 @@ export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.Sour
 						addExport(defaultExport);
 
 						return creation ? [creation, defaultExport] : defaultExport;
-					} else {
+					} else if (!isVoidExportInitializer(result.expression)) {
 						if (canHoistCreation(result.expression.right)) {
 							addExport(result);
 						} else {
-							const tmpIdentifier = ts.createIdentifier(`__export_${result.expression.left.name.text}`);
-							const creation = ts.createVariableStatement(
+							const tmpIdentifier = factory.createIdentifier(
+								`__export_${result.expression.left.name.text}`
+							);
+							const creation = factory.createVariableStatement(
 								undefined,
-								ts.createVariableDeclarationList(
-									[ts.createVariableDeclaration(tmpIdentifier, undefined, result.expression.right)],
+								factory.createVariableDeclarationList(
+									[
+										factory.createVariableDeclaration(
+											tmpIdentifier,
+											undefined,
+											undefined,
+											result.expression.right
+										)
+									],
 									constFlag
 								)
 							);
-							const exportAssignment = ts.createExpressionStatement(
-								ts.createBinary(
+							const exportAssignment = factory.createExpressionStatement(
+								factory.createBinaryExpression(
 									result.expression.left,
-									ts.createToken(ts.SyntaxKind.EqualsToken),
+									factory.createToken(ts.SyntaxKind.EqualsToken),
 									tmpIdentifier
 								)
 							);
