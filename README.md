@@ -26,7 +26,6 @@ Put this (or something similar) in your package.json:
 {
     "main": "lib",
     "types": "lib",
-    "module": "es",
     "exports": {
         ".": {
             "require": "./lib/index.js",
