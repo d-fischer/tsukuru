@@ -31,7 +31,7 @@
     "@types/rimraf": "^3.0.0",
     "chalk": "^4.1.0",
     "rimraf": "^3.0.2",
-    "tslib": "^2.0.1"
+    "tslib": "^2.0.3"
   },
   "peerDependencies": {
     "typescript": "~4.0.2"
