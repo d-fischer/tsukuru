@@ -9,10 +9,10 @@ export interface WrapperOptions {
 }
 
 const sysFormatDiagnosticsHost = {
-	getCurrentDirectory: function() {
+	getCurrentDirectory: function () {
 		return ts.sys.getCurrentDirectory();
 	},
-	getNewLine: function() {
+	getNewLine: function () {
 		return ts.sys.newLine;
 	},
 	getCanonicalFileName: createGetCanonicalFileName(ts.sys.useCaseSensitiveFileNames)
@@ -23,16 +23,16 @@ function createDiagnosticReporter(system: ts.System, pretty?: boolean) {
 		system === ts.sys
 			? sysFormatDiagnosticsHost
 			: {
-					getCurrentDirectory: function() {
+					getCurrentDirectory: function () {
 						return system.getCurrentDirectory();
 					},
-					getNewLine: function() {
+					getNewLine: function () {
 						return system.newLine;
 					},
 					getCanonicalFileName: createGetCanonicalFileName(system.useCaseSensitiveFileNames)
 			  };
 	if (!pretty) {
-		return function(diagnostic: ts.Diagnostic) {
+		return function (diagnostic: ts.Diagnostic) {
 			return system.write(ts.formatDiagnostic(diagnostic, host));
 		};
 	}
@@ -111,8 +111,6 @@ export function compile(parsedCmd: ts.ParsedCommandLine, { useCjsTransformers }:
 			...options,
 			outDir: 'es',
 			module: ts.ModuleKind.ESNext,
-			// tslib is currently not compatible with native ESM
-			importHelpers: false,
 			// double declarations are not necessary
 			declaration: false
 		}
