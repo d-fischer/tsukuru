@@ -98,7 +98,7 @@ export async function compile(configFilePath: string, { useCjsTransformers, shou
 		throbber: undefined,
 		nextFrameTime: Date.now(),
 		isCancellationRequested() {
-			if (this.throbber) {
+			if (this.throbber && process.stderr.isTTY) {
 				const now = Date.now();
 				if (now >= this.nextFrameTime) {
 					this.throbber.render();
@@ -114,7 +114,9 @@ export async function compile(configFilePath: string, { useCjsTransformers, shou
 	};
 	function step(name: string, worker: () => void) {
 		const throbber = ora({ text: `${name}... `, color: 'blue' });
-		throbber.render();
+		if (process.stderr.isTTY) {
+			throbber.render();
+		}
 		renderHackCancellationToken.throbber = throbber;
 		const start = Date.now();
 		worker();
