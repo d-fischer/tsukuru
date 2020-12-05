@@ -2,12 +2,8 @@
 import { Command, flags } from '@oclif/command';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import * as _rimraf from 'rimraf';
-import { promisify } from 'util';
-import { compile, parseCmdLine, WrapperOptions } from './index';
+import { compile, WrapperOptions } from './index';
 import { exit } from './util';
-
-const rimraf = promisify(_rimraf);
 
 // eslint-disable-next-line consistent-return
 async function findConfigFile(): Promise<string> {
@@ -50,20 +46,11 @@ class Builder extends Command {
 	async run(): Promise<void> {
 		const { flags: usedFlags } = this.parse(Builder);
 		const configFilePath = usedFlags['config-file'] ?? (await findConfigFile());
-		const parsedCmd = parseCmdLine(configFilePath);
-		if (usedFlags.clean) {
-			console.log('Cleaning up...');
-			const configDir = path.dirname(configFilePath);
-			const { outDir } = parsedCmd.options;
-			if (outDir) {
-				await rimraf(path.resolve(configDir, outDir));
-			}
-			await rimraf(path.join(configDir, 'es'));
-		}
 		const options: WrapperOptions = {
-			useCjsTransformers: !usedFlags['no-cjs-root-export']
+			useCjsTransformers: !usedFlags['no-cjs-root-export'],
+			shouldClean: usedFlags.clean
 		};
-		exit(compile(parsedCmd, options));
+		exit(await compile(configFilePath, options));
 	}
 }
 
