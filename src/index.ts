@@ -93,7 +93,10 @@ interface OraHack {
 	nextFrameTime: number;
 }
 
-export async function compile(configFilePath: string, { useCjsTransformers, shouldClean }: WrapperOptions) {
+export async function compile(
+	configFilePath: string,
+	{ useCjsTransformers, shouldClean }: WrapperOptions
+): Promise<number> {
 	const renderHackCancellationToken: ts.CancellationToken & OraHack = {
 		throbber: undefined,
 		nextFrameTime: Date.now(),

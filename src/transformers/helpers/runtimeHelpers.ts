@@ -15,7 +15,7 @@ const __tsu = {
 	}
 };
  */
-export const createRuntimeHelpers = (factory: ts.NodeFactory, constFlag: ts.NodeFlags) =>
+export const createRuntimeHelpers = (factory: ts.NodeFactory, constFlag: ts.NodeFlags): ts.VariableStatement =>
 	factory.createVariableStatement(
 		undefined,
 		factory.createVariableDeclarationList(
@@ -167,7 +167,7 @@ export const createDefineExportCall = (
 	name: ts.StringLiteral,
 	definition: ts.ObjectLiteralExpression,
 	factory: ts.NodeFactory
-) =>
+): ts.ExpressionStatement =>
 	factory.createExpressionStatement(
 		factory.createCallExpression(
 			factory.createPropertyAccessExpression(factory.createIdentifier('__tsu'), 'defineExport'),
@@ -176,7 +176,7 @@ export const createDefineExportCall = (
 		)
 	);
 
-export const createRedefineExportsCall = (factory: ts.NodeFactory) =>
+export const createRedefineExportsCall = (factory: ts.NodeFactory): ts.ExpressionStatement =>
 	factory.createExpressionStatement(
 		factory.createCallExpression(
 			factory.createPropertyAccessExpression(factory.createIdentifier('__tsu'), 'redefineExports'),
