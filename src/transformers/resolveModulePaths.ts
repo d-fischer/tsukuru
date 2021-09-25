@@ -13,28 +13,65 @@ function readFile(fileName: string): string | undefined {
 	return ts.sys.readFile(fileName);
 }
 
+function transformImportExportNodePath(factory: ts.NodeFactory, node: ts.Node, transformedPath: string) {
+	if (ts.isImportDeclaration(node)) {
+		return factory.createImportDeclaration(
+			node.decorators,
+			node.modifiers,
+			node.importClause,
+			factory.createStringLiteral(transformedPath)
+		);
+	}
+
+	if (ts.isExportDeclaration(node)) {
+		return factory.createExportDeclaration(
+			node.decorators,
+			node.modifiers,
+			node.isTypeOnly,
+			node.exportClause,
+			factory.createStringLiteral(transformedPath)
+		);
+	}
+
+	if (isDynamicImport(node)) {
+		return factory.createCallExpression(factory.createIdentifier('import'), undefined, [
+			factory.createStringLiteral(transformedPath)
+		]);
+	}
+
+	return node;
+}
+
+function getNodeImportPath(node: ts.Node) {
+	if (
+		(ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
+		node.moduleSpecifier &&
+		ts.isStringLiteral(node.moduleSpecifier)
+	) {
+		return node.moduleSpecifier.text;
+	}
+
+	if (isDynamicImport(node)) {
+		const importArg = node.arguments[0];
+		if (ts.isStringLiteral(importArg)) {
+			return importArg.text;
+		}
+	}
+
+	return undefined;
+}
+
 export function resolveModulePaths(): ts.TransformerFactory<ts.SourceFile> {
 	return (ctx: ts.TransformationContext) => {
 		const { factory } = ctx;
 		const visitor: ts.Visitor = node => {
-			let importPath: string | undefined;
-			if (
-				(ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) &&
-				node.moduleSpecifier &&
-				ts.isStringLiteral(node.moduleSpecifier)
-			) {
-				importPath = node.moduleSpecifier.text;
-			} else if (isDynamicImport(node)) {
-				const importArg = node.arguments[0];
-				if (ts.isStringLiteral(importArg)) {
-					importPath = importArg.text;
-				}
-			}
+			const importPath = getNodeImportPath(node);
 
 			if (importPath) {
 				if (importPath.startsWith('./') || importPath.startsWith('../')) {
 					let transformedPath = importPath;
 					let sourceFile: ts.SourceFile | undefined = node.getSourceFile();
+					// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 					if (!sourceFile && (ts.isExportDeclaration(node) || ts.isImportDeclaration(node))) {
 						sourceFile = node.moduleSpecifier?.getSourceFile();
 					}
@@ -56,29 +93,7 @@ export function resolveModulePaths(): ts.TransformerFactory<ts.SourceFile> {
 						}
 					}
 					if (transformedPath !== importPath) {
-						let newNode: ts.Node;
-						if (ts.isImportDeclaration(node)) {
-							newNode = factory.createImportDeclaration(
-								node.decorators,
-								node.modifiers,
-								node.importClause,
-								factory.createStringLiteral(transformedPath)
-							);
-						} else if (ts.isExportDeclaration(node)) {
-							newNode = factory.createExportDeclaration(
-								node.decorators,
-								node.modifiers,
-								node.isTypeOnly,
-								node.exportClause,
-								factory.createStringLiteral(transformedPath)
-							);
-						} else if (isDynamicImport(node)) {
-							newNode = factory.createCallExpression(factory.createIdentifier('import'), undefined, [
-								factory.createStringLiteral(transformedPath)
-							]);
-						} else {
-							newNode = node;
-						}
+						const newNode = transformImportExportNodePath(factory, node, transformedPath);
 
 						ts.setSourceMapRange(newNode, ts.getSourceMapRange(node));
 

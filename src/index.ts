@@ -48,14 +48,14 @@ function handleDiagnostics(
 }
 
 function handleConfigParsingErrors(parsedCommandLine: ts.ParsedCommandLine | undefined, host: ts.CompilerHost) {
-	if (parsedCommandLine && parsedCommandLine.errors.length) {
-		process.stderr.write('\n\n');
-		console.error(formatDiagnostics(parsedCommandLine.errors, host));
-		exit(1);
-	}
 	if (!parsedCommandLine) {
 		process.stderr.write('\n\n');
 		console.error('Unknown error parsing config.');
+		exit(1);
+	}
+	if (parsedCommandLine.errors.length) {
+		process.stderr.write('\n\n');
+		console.error(formatDiagnostics(parsedCommandLine.errors, host));
 		exit(1);
 	}
 }
@@ -158,7 +158,9 @@ export async function compile(
 
 	const { options, fileNames } = parsedConfig;
 
+	// eslint-disable-next-line @typescript-eslint/init-declarations
 	let cjsCompilerHost!: ts.CompilerHost;
+	// eslint-disable-next-line @typescript-eslint/init-declarations
 	let cjsProgram!: ts.Program;
 	step('Creating CommonJS compiler instance', () => {
 		cjsCompilerHost = ts.createCompilerHost(options);
@@ -194,15 +196,22 @@ export async function compile(
 
 	// HACK: there's no API for this so we have to monkey patch a private TS API
 	// @ts-ignore
-	const origOutputPath = ts.getOwnEmitOutputFilePath;
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+	const origOutputPath: (fileName: string, host: unknown, extension: string) => string = ts.getOwnEmitOutputFilePath;
 	// @ts-ignore
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	ts.getOwnEmitOutputFilePath = function getOwnEmitOutputFilePath(fileName: string, host: any, extension: string) {
+	ts.getOwnEmitOutputFilePath = function getOwnEmitOutputFilePath(
+		fileName: string,
+		host: unknown,
+		extension: string
+	) {
 		const newExtension = extension === '.js' ? '.mjs' : extension;
 		return origOutputPath(fileName, host, newExtension);
 	};
 
+	// eslint-disable-next-line @typescript-eslint/init-declarations
 	let esmCompilerHost!: ts.CompilerHost;
+	// eslint-disable-next-line @typescript-eslint/init-declarations
 	let esmProgram!: ts.Program;
 	step('Creating ESM compiler instance', () => {
 		const esmOptions = {

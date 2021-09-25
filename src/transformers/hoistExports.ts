@@ -168,7 +168,9 @@ export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.Sour
 					result.expression.left.expression.text === 'exports'
 				) {
 					if (result.expression.left.name.text === 'default') {
+						// eslint-disable-next-line @typescript-eslint/init-declarations
 						let exportedExpression: ts.Expression;
+						// eslint-disable-next-line @typescript-eslint/init-declarations
 						let creation: ts.VariableStatement | undefined;
 						let defaultExport = result;
 						if (canHoistCreation(result.expression.right)) {

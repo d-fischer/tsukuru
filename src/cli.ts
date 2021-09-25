@@ -2,7 +2,8 @@
 import { Command, flags } from '@oclif/command';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { compile, WrapperOptions } from './index';
+import type { WrapperOptions } from './index';
+import { compile } from './index';
 import { exit } from './util';
 
 // eslint-disable-next-line consistent-return
@@ -54,5 +55,5 @@ class Builder extends Command {
 	}
 }
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// eslint-disable-next-line @typescript-eslint/no-require-imports,@typescript-eslint/no-var-requires
 (Builder.run() as Promise<void>).catch(require('@oclif/errors/handle'));
