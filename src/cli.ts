@@ -2,8 +2,8 @@
 import { Command, flags } from '@oclif/command';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import type { WrapperOptions } from './index';
-import { compile } from './index';
+import type { WrapperOptions } from './project/compile';
+import { compile } from './project/compile';
 import { exit } from './util';
 
 // eslint-disable-next-line consistent-return
@@ -37,7 +37,7 @@ class Builder extends Command {
 		}),
 		'no-cjs-root-export': flags.boolean({
 			char: 'R',
-			description: "Disable require('pkg') as a shortcut to the package's root export"
+			description: "Disable require('pkg') as a shortcut to the package's defaultr export"
 		}),
 		clean: flags.boolean({
 			description: 'Remove the output files before building'
@@ -51,7 +51,8 @@ class Builder extends Command {
 			useCjsTransformers: !usedFlags['no-cjs-root-export'],
 			shouldClean: usedFlags.clean
 		};
-		exit(await compile(configFilePath, options));
+		await compile(configFilePath, options);
+		exit(0);
 	}
 }
 
