@@ -16,7 +16,6 @@ export class SimpleProjectMode implements ProjectMode {
 
 	private _esmCompilerHost?: ts.CompilerHost;
 	private _esmProgram?: ts.Program;
-	private _esmHack = false;
 
 	constructor(
 		private readonly _configFilePath: string,
@@ -38,9 +37,6 @@ export class SimpleProjectMode implements ProjectMode {
 	initCommonJs(): void {
 		if (this._cjsCompilerHost || this._cjsProgram) {
 			throw new Error('invalid state: CJS host/program already initialized');
-		}
-		if (this._esmHack) {
-			throw new Error('invalid state: after initializing ESM, you must emit it');
 		}
 		this._cjsCompilerHost = ts.createCompilerHost(this._config.options);
 		this._cjsProgram = ts.createProgram({
@@ -71,9 +67,6 @@ export class SimpleProjectMode implements ProjectMode {
 		if (!this._cjsCompilerHost || !this._cjsProgram) {
 			throw new Error('invalid state: CJS host/program not initialized');
 		}
-		if (this._esmHack) {
-			throw new Error('invalid state: after initializing ESM, you must emit it');
-		}
 		const cjsEmitResult = this._cjsProgram.emit(
 			undefined,
 			undefined,
@@ -94,22 +87,6 @@ export class SimpleProjectMode implements ProjectMode {
 		if (this._esmCompilerHost || this._esmProgram) {
 			throw new Error('invalid state: ESM host/program already initialized');
 		}
-
-		// HACK: there's no API for this so we have to monkey patch a private TS API
-		this._esmHack = true;
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-		const origOutputPath: (fileName: string, host: unknown, extension: string) => string =
-			// @ts-ignore
-			ts.getOwnEmitOutputFilePath;
-		// @ts-ignore
-		ts.getOwnEmitOutputFilePath = function getOwnEmitOutputFilePath(
-			fileName: string,
-			host: unknown,
-			extension: string
-		) {
-			const newExtension = extension === '.js' ? '.mjs' : extension;
-			return origOutputPath(fileName, host, newExtension);
-		};
 
 		const esmOptions = {
 			...this._config.options,
@@ -139,9 +116,18 @@ export class SimpleProjectMode implements ProjectMode {
 		if (!this._esmCompilerHost || !this._esmProgram) {
 			throw new Error('invalid state: ESM host/program not initialized');
 		}
-		if (!this._esmHack) {
-			throw new Error('invalid state: after initializing ESM, you can only emit it once');
-		}
+		// HACK: there's no API for this so we have to monkey patch a private TS  aPI
+		/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any */
+		const origOutputPath: (fileName: string, host: unknown, extension: string) => string = (ts as any)
+			.getOwnEmitOutputFilePath;
+		(ts as any).getOwnEmitOutputFilePath = function getOwnEmitOutputFilePath(
+			fileName: string,
+			host: unknown,
+			extension: string
+		) {
+			const newExtension = extension === '.js' ? '.mjs' : extension;
+			return origOutputPath(fileName, host, newExtension);
+		};
 		const esmEmitResult = this._esmProgram.emit(undefined, undefined, this._cancellationToken, undefined, {
 			before: [],
 			after: [resolveModulePaths()],
@@ -149,9 +135,7 @@ export class SimpleProjectMode implements ProjectMode {
 		});
 		handleDiagnostics(esmEmitResult.diagnostics, this._esmCompilerHost, 'Error emitting ESM');
 
-		// @ts-ignore
-		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-		ts.getOwnEmitOutputFilePath = origOutputPath;
-		this._esmHack = false;
+		(ts as any).getOwnEmitOutputFilePath = origOutputPath;
+		/* eslint-enable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any */
 	}
 }
