@@ -203,6 +203,11 @@
     "@types/glob" "*"
     "@types/node" "*"
 
+"@types/ts-expose-internals@npm:ts-expose-internals@4.3.2":
+  version "4.3.2"
+  resolved "https://registry.yarnpkg.com/ts-expose-internals/-/ts-expose-internals-4.3.2.tgz#99ea3fd7b2b0750e994143c20fe269a5d434dee1"
+  integrity sha512-QqBZDp8fOVFW+/+taGQXx6K/gmU+/Zs9yLxcZcrMObHhmvqBzuImjIU7ZTY/HfcZStO2eXWtJrIlFNjepCV1ew==
+
 "@typescript-eslint/eslint-plugin@^4.10.0":
   version "4.31.2"
   resolved "https://registry.yarnpkg.com/@typescript-eslint/eslint-plugin/-/eslint-plugin-4.31.2.tgz#9f41efaee32cdab7ace94b15bd19b756dd099b0a"

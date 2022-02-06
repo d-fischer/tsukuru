@@ -3,6 +3,7 @@ import * as _rimraf from 'rimraf';
 import * as ts from 'typescript';
 import { promisify } from 'util';
 import { exit, handleDiagnostics } from '../../util';
+import type { WrapperOptions } from '../compile';
 import { hoistExports } from '../transformers/hoistExports';
 import { resolveModulePaths } from '../transformers/resolveModulePaths';
 import { splitEnumExports } from '../transformers/splitEnumExports';
@@ -18,31 +19,35 @@ export class SimpleProjectMode implements ProjectMode {
 	private _esmProgram?: ts.Program;
 
 	constructor(
-		private readonly _configFilePath: string,
-		private readonly _config: ts.ParsedCommandLine,
+		private readonly _config: WrapperOptions,
+		private readonly _tsConfigFilePath: string,
+		private readonly _tsConfig: ts.ParsedCommandLine,
 		private readonly _cancellationToken: ts.CancellationToken
 	) {}
 
 	checkRequirements(): void {
-		if (!this._config.options.isolatedModules) {
+		if (!this._tsConfig.options.isolatedModules) {
 			console.error(
 				`This tool depends on the isolatedModules option. Please enable it in your ${path.basename(
-					this._configFilePath
+					this._tsConfigFilePath
 				)} file.`
 			);
 			exit(1);
 		}
 	}
 
-	initCommonJs(): void {
+	async cleanAndInitCommonJs(): Promise<void> {
 		if (this._cjsCompilerHost || this._cjsProgram) {
 			throw new Error('invalid state: CJS host/program already initialized');
 		}
-		this._cjsCompilerHost = ts.createCompilerHost(this._config.options);
+		if (this._config.shouldClean) {
+			await this._cleanCommonJs();
+		}
+		this._cjsCompilerHost = ts.createCompilerHost(this._tsConfig.options);
 		this._cjsProgram = ts.createProgram({
-			options: this._config.options,
-			configFileParsingDiagnostics: this._config.errors,
-			rootNames: this._config.fileNames,
+			options: this._tsConfig.options,
+			configFileParsingDiagnostics: this._tsConfig.errors,
+			rootNames: this._tsConfig.fileNames,
 			host: this._cjsCompilerHost
 		});
 	}
@@ -53,14 +58,6 @@ export class SimpleProjectMode implements ProjectMode {
 		}
 		const preEmitDiagnostics = ts.getPreEmitDiagnostics(this._cjsProgram, undefined, this._cancellationToken);
 		handleDiagnostics(preEmitDiagnostics, this._cjsCompilerHost, 'Found syntax or type errors');
-	}
-
-	async cleanCommonJs(): Promise<void> {
-		const configDir = path.dirname(this._configFilePath);
-		const { outDir } = this._config.options;
-		if (outDir) {
-			await rimraf(path.resolve(configDir, outDir));
-		}
 	}
 
 	emitCommonJs(useTransformers: boolean): void {
@@ -83,13 +80,17 @@ export class SimpleProjectMode implements ProjectMode {
 		handleDiagnostics(cjsEmitResult.diagnostics, this._cjsCompilerHost, 'Error emitting CommonJS');
 	}
 
-	initEsm(): void {
+	async cleanAndInitEsm(): Promise<void> {
 		if (this._esmCompilerHost || this._esmProgram) {
 			throw new Error('invalid state: ESM host/program already initialized');
 		}
 
+		if (this._config.shouldClean) {
+			await this._cleanEsm();
+		}
+
 		const esmOptions = {
-			...this._config.options,
+			...this._tsConfig.options,
 			outDir: 'es',
 			module: ts.ModuleKind.ESNext,
 			// double declarations are not necessary
@@ -101,15 +102,10 @@ export class SimpleProjectMode implements ProjectMode {
 		this._esmCompilerHost = ts.createCompilerHost(esmOptions);
 		this._esmProgram = ts.createProgram({
 			options: esmOptions,
-			configFileParsingDiagnostics: this._config.errors,
-			rootNames: this._config.fileNames,
+			configFileParsingDiagnostics: this._tsConfig.errors,
+			rootNames: this._tsConfig.fileNames,
 			host: this._esmCompilerHost
 		});
-	}
-
-	async cleanEsm(): Promise<void> {
-		const configDir = path.dirname(this._configFilePath);
-		await rimraf(path.join(configDir, 'es'));
 	}
 
 	emitEsm(): void {
@@ -133,9 +129,22 @@ export class SimpleProjectMode implements ProjectMode {
 			after: [resolveModulePaths()],
 			afterDeclarations: []
 		});
-		handleDiagnostics(esmEmitResult.diagnostics, this._esmCompilerHost, 'Error emitting ESM');
+		handleDiagnostics(esmEmitResult.diagnostics, this._esmCompilerHost, 'Error emitting ES modules');
 
 		(ts as any).getOwnEmitOutputFilePath = origOutputPath;
 		/* eslint-enable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any */
+	}
+
+	private async _cleanCommonJs(): Promise<void> {
+		const configDir = path.dirname(this._tsConfigFilePath);
+		const { outDir } = this._tsConfig.options;
+		if (outDir) {
+			await rimraf(path.resolve(configDir, outDir));
+		}
+	}
+
+	private async _cleanEsm(): Promise<void> {
+		const configDir = path.dirname(this._tsConfigFilePath);
+		await rimraf(path.join(configDir, 'es'));
 	}
 }

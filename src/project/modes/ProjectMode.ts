@@ -1,11 +1,10 @@
 export interface ProjectMode {
-	checkRequirements: () => void | Promise<void>;
-	initCommonJs: () => void;
+	checkRequirements?: () => void | Promise<void>;
+	checkRequirementsAfterInit?: () => void | Promise<void>;
+	cleanAndInitCommonJs: () => void | Promise<void>;
 	checkTsErrors: () => void;
-	cleanCommonJs: () => void | Promise<void>;
 	emitCommonJs: (useTransformers: boolean) => void;
 
-	initEsm: () => void;
-	cleanEsm: () => void | Promise<void>;
+	cleanAndInitEsm: () => void | Promise<void>;
 	emitEsm: () => void;
 }

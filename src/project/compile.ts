@@ -1,54 +1,13 @@
 import * as ora from 'ora';
-import * as ts from 'typescript';
-import { exit, formatDiagnostics, handleDiagnostics } from '../util';
-// import { CompositeProjectMode } from './modes/CompositeProjectMode';
+import type * as ts from 'typescript';
+import { CompositeProjectMode } from './modes/CompositeProjectMode';
 import type { ProjectMode } from './modes/ProjectMode';
 import { SimpleProjectMode } from './modes/SimpleProjectMode';
+import { parseConfig } from './parseConfig';
 
 export interface WrapperOptions {
 	useCjsTransformers?: boolean;
 	shouldClean?: boolean;
-}
-
-function handleConfigParsingErrors(parsedCommandLine: ts.ParsedCommandLine | undefined, host: ts.CompilerHost) {
-	if (!parsedCommandLine) {
-		process.stderr.write('\n\n');
-		console.error('Unknown error parsing config.');
-		exit(1);
-	}
-	if (parsedCommandLine.errors.length) {
-		process.stderr.write('\n\n');
-		console.error(formatDiagnostics(parsedCommandLine.errors, host));
-		exit(1);
-	}
-}
-
-function parseConfig(configFilePath: string) {
-	const tempCompilerHost = ts.createCompilerHost({}, false);
-	// from here https://github.com/Microsoft/TypeScript/blob/6fb0f6818ad48bf4f685e86c03405ddc84b530ed/src/compiler/program.ts#L2812
-	const configParsingHost: ts.ParseConfigFileHost = {
-		fileExists: f => tempCompilerHost.fileExists(f),
-		readDirectory: (root, extensions, includes, depth?) =>
-			tempCompilerHost.readDirectory ? tempCompilerHost.readDirectory(root, extensions, includes, depth) : [],
-		readFile: f => tempCompilerHost.readFile(f),
-		useCaseSensitiveFileNames: tempCompilerHost.useCaseSensitiveFileNames(),
-		getCurrentDirectory: () => tempCompilerHost.getCurrentDirectory(),
-		onUnRecoverableConfigFileDiagnostic: () => undefined
-	};
-	const parsedConfig = ts.getParsedCommandLineOfConfigFile(
-		configFilePath,
-		{},
-		{
-			...configParsingHost,
-			onUnRecoverableConfigFileDiagnostic(d) {
-				handleDiagnostics([d], tempCompilerHost);
-			}
-		}
-	)!;
-
-	handleConfigParsingErrors(parsedConfig, tempCompilerHost);
-
-	return parsedConfig;
 }
 
 interface OraHack {
@@ -56,10 +15,7 @@ interface OraHack {
 	nextFrameTime: number;
 }
 
-export async function compile(
-	configFilePath: string,
-	{ useCjsTransformers, shouldClean }: WrapperOptions
-): Promise<void> {
+export async function compile(configFilePath: string, options: WrapperOptions): Promise<void> {
 	const renderHackCancellationToken: ts.CancellationToken & OraHack = {
 		throbber: undefined,
 		nextFrameTime: Date.now(),
@@ -100,41 +56,32 @@ export async function compile(
 
 	const parsedConfig = parseConfig(configFilePath);
 
-	// const project: ProjectMode = parsedConfig.projectReferences
-	// 	? new CompositeProjectMode(configFilePath, parsedConfig, renderHackCancellationToken)
-	// 	: new SimpleProjectMode(configFilePath, parsedConfig, renderHackCancellationToken);
+	const project: ProjectMode = parsedConfig.projectReferences
+		? new CompositeProjectMode(options, configFilePath, parsedConfig, renderHackCancellationToken)
+		: new SimpleProjectMode(options, configFilePath, parsedConfig, renderHackCancellationToken);
 
-	const project: ProjectMode = new SimpleProjectMode(configFilePath, parsedConfig, renderHackCancellationToken);
+	await project.checkRequirements?.();
 
-	await project.checkRequirements();
+	await stepAsync(
+		`${options.shouldClean ? 'Cleaning up and c' : 'C'}reating CommonJS compiler instance`,
+		async () => {
+			await project.cleanAndInitCommonJs();
+		}
+	);
 
-	step('Creating CommonJS compiler instance', () => {
-		project.initCommonJs();
-	});
-
-	if (shouldClean) {
-		await stepAsync('Cleaning up CommonJS emit results', async () => {
-			await project.cleanCommonJs();
-		});
-	}
+	await project.checkRequirementsAfterInit?.();
 
 	step('Checking for syntax and type errors', () => {
 		project.checkTsErrors();
 	});
 
 	step('Emitting CommonJS modules', () => {
-		project.emitCommonJs(useCjsTransformers ?? false);
+		project.emitCommonJs(options.useCjsTransformers ?? false);
 	});
 
-	step('Creating ESM compiler instance', () => {
-		project.initEsm();
+	await stepAsync(`${options.shouldClean ? 'Cleaning up and c' : 'C'}reating ESM compiler instance`, async () => {
+		await project.cleanAndInitEsm();
 	});
-
-	if (shouldClean) {
-		await stepAsync('Cleaning up ES Module emit results', async () => {
-			await project.cleanEsm();
-		});
-	}
 
 	step('Emitting ES Modules', () => {
 		project.emitEsm();

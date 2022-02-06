@@ -1,4 +1,5 @@
 import * as chalk from 'chalk';
+import { createGetCanonicalFileName } from 'typescript';
 import * as ts from 'typescript';
 
 export function exit(exitCode: number): never {
@@ -8,17 +9,15 @@ export function exit(exitCode: number): never {
 	process.exit(exitCode);
 }
 
-export function formatDiagnostics(diagnostics: readonly ts.Diagnostic[], host: ts.CompilerHost): string {
+export function formatDiagnostics(diagnostics: readonly ts.Diagnostic[], host?: ts.CompilerHost): string {
 	const shouldBePretty = !!ts.sys.writeOutputIsTTY?.();
-	const formatHost: ts.FormatDiagnosticsHost = {
-		getCanonicalFileName(fileName: string) {
-			return host.getCanonicalFileName(fileName);
-		},
+	const formatHost: ts.FormatDiagnosticsHost = host ?? {
+		getCanonicalFileName: createGetCanonicalFileName(ts.sys.useCaseSensitiveFileNames),
 		getCurrentDirectory() {
-			return host.getCurrentDirectory();
+			return ts.sys.getCurrentDirectory();
 		},
 		getNewLine() {
-			return host.getNewLine();
+			return '\n';
 		}
 	};
 	if (shouldBePretty) {
@@ -29,7 +28,7 @@ export function formatDiagnostics(diagnostics: readonly ts.Diagnostic[], host: t
 
 export function handleDiagnostics(
 	diagnostics: readonly ts.Diagnostic[],
-	host: ts.CompilerHost,
+	host: ts.CompilerHost | undefined,
 	errorPrefix = 'Unknown error'
 ): void {
 	if (diagnostics.length) {
@@ -38,4 +37,19 @@ export function handleDiagnostics(
 		console.error(`${errorPrefix}. Exiting.`);
 		exit(1);
 	}
+}
+
+// eslint-disable-next-line @typescript-eslint/ban-types
+export function pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
+	return Object.assign(
+		{},
+		...Object.entries(obj)
+			.filter(([key]) => keys.includes(key as K))
+			.map(([key, value]) => ({ [key]: value as T[K] }))
+	) as Pick<T, K>;
+}
+
+// eslint-disable-next-line @typescript-eslint/ban-types
+export function omit<T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> {
+	return pick(obj, Object.keys(obj).filter(key => !keys.includes(key as K)) as Array<keyof T>);
 }
