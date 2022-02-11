@@ -195,8 +195,8 @@ export class CompositeProjectMode implements ProjectMode {
 
 		// HACK: there's no API for this so we have to monkey patch a private TS  aPI
 		/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any */
-		const origOutputPath: (fileName: string, host: unknown, extension: string) => string = (ts as any)
-			.getOwnEmitOutputFilePath;
+		const origOutputPath: (fileName: string, host: unknown, extension: string) => string =
+			ts.getOwnEmitOutputFilePath;
 		(ts as any).getOwnEmitOutputFilePath = function getOwnEmitOutputFilePath(
 			fileName: string,
 			host: unknown,
@@ -212,8 +212,7 @@ export class CompositeProjectMode implements ProjectMode {
 			const host = this._ensureCompilerHost(proj, 'esm');
 			const program = this._ensureProgram(proj, 'esm');
 			const esmEmitResult = program.emit(undefined, undefined, this._cancellationToken, undefined, {
-				after: [resolveModulePaths()],
-				afterDeclarations: []
+				after: [resolveModulePaths()]
 			});
 			handleDiagnostics(esmEmitResult.diagnostics, host, 'Error emitting ES modules');
 		}
@@ -256,13 +255,14 @@ export class CompositeProjectMode implements ProjectMode {
 			buildType === 'esm'
 				? {
 						...proj.tsConfig.options,
-						outDir: 'es',
+						outDir: path.join(path.dirname(proj.tsConfig.options.outDir!), 'es'),
 						module: ts.ModuleKind.ESNext,
 						// double declarations are not necessary
 						declaration: false,
 						// avoid type checks at all costs
 						noResolve: true,
-						noLib: true
+						noLib: true,
+						composite: false
 				  }
 				: proj.tsConfig.options;
 

@@ -112,10 +112,11 @@ export class SimpleProjectMode implements ProjectMode {
 		if (!this._esmCompilerHost || !this._esmProgram) {
 			throw new Error('invalid state: ESM host/program not initialized');
 		}
+
 		// HACK: there's no API for this so we have to monkey patch a private TS  aPI
 		/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any */
-		const origOutputPath: (fileName: string, host: unknown, extension: string) => string = (ts as any)
-			.getOwnEmitOutputFilePath;
+		const origOutputPath: (fileName: string, host: unknown, extension: string) => string =
+			ts.getOwnEmitOutputFilePath;
 		(ts as any).getOwnEmitOutputFilePath = function getOwnEmitOutputFilePath(
 			fileName: string,
 			host: unknown,
@@ -125,9 +126,7 @@ export class SimpleProjectMode implements ProjectMode {
 			return origOutputPath(fileName, host, newExtension);
 		};
 		const esmEmitResult = this._esmProgram.emit(undefined, undefined, this._cancellationToken, undefined, {
-			before: [],
-			after: [resolveModulePaths()],
-			afterDeclarations: []
+			after: [resolveModulePaths()]
 		});
 		handleDiagnostics(esmEmitResult.diagnostics, this._esmCompilerHost, 'Error emitting ES modules');
 
