@@ -28,6 +28,7 @@ async function findConfigFile(): Promise<string> {
 }
 
 class Builder extends Command {
+	/* eslint-disable @typescript-eslint/naming-convention */
 	static flags = {
 		version: flags.version(),
 		help: flags.help(),
@@ -43,6 +44,7 @@ class Builder extends Command {
 			description: 'Remove the output files before building'
 		})
 	};
+	/* eslint-enable @typescript-eslint/naming-convention */
 
 	async run(): Promise<void> {
 		const { flags: usedFlags } = this.parse(Builder);
