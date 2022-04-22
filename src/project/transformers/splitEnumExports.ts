@@ -19,7 +19,9 @@ export function splitEnumExports(): ts.TransformerFactory<ts.SourceFile> {
 						undefined,
 						undefined,
 						false,
-						factory.createNamedExports([factory.createExportSpecifier(undefined, enumDeclaration.name)])
+						factory.createNamedExports([
+							factory.createExportSpecifier(false, undefined, enumDeclaration.name)
+						])
 					);
 					return [enumDeclaration, exportDeclaration];
 				}
