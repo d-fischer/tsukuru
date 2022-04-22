@@ -1,4 +1,5 @@
 export interface ProjectMode {
+	init?: () => void | Promise<void>;
 	checkRequirements?: () => void | Promise<void>;
 	checkRequirementsAfterInit?: () => void | Promise<void>;
 	cleanAndInitCommonJs: () => void | Promise<void>;

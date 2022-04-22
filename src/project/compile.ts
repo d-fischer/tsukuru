@@ -1,6 +1,7 @@
 import * as ora from 'ora';
 import type * as ts from 'typescript';
 import { CompositeProjectMode } from './modes/CompositeProjectMode';
+import { MultiSimpleProjectMode } from './modes/MultiSimpleProjectMode';
 import type { ProjectMode } from './modes/ProjectMode';
 import { SimpleProjectMode } from './modes/SimpleProjectMode';
 import { parseConfig } from './parseConfig';
@@ -8,6 +9,7 @@ import { parseConfig } from './parseConfig';
 export interface WrapperOptions {
 	useCjsTransformers?: boolean;
 	shouldClean?: boolean;
+	experimentalCompositeProject?: boolean;
 }
 
 interface OraHack {
@@ -56,10 +58,21 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 
 	const parsedConfig = parseConfig(configFilePath);
 
-	const project: ProjectMode = parsedConfig.projectReferences
-		? new CompositeProjectMode(options, configFilePath, parsedConfig, renderHackCancellationToken)
-		: new SimpleProjectMode(options, configFilePath, parsedConfig, renderHackCancellationToken);
+	function createProjectFromConfig(): ProjectMode {
+		if (!parsedConfig.projectReferences) {
+			return new SimpleProjectMode(options, configFilePath, parsedConfig, renderHackCancellationToken);
+		}
 
+		if (options.experimentalCompositeProject) {
+			return new CompositeProjectMode(options, configFilePath, parsedConfig, renderHackCancellationToken);
+		}
+
+		return new MultiSimpleProjectMode(options, parsedConfig, renderHackCancellationToken);
+	}
+
+	const project = createProjectFromConfig();
+
+	await project.init?.();
 	await project.checkRequirements?.();
 
 	await stepAsync(
