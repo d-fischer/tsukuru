@@ -1,14 +1,15 @@
 import * as ts from 'typescript';
 import { createDefineExportCall, createRedefineExportsCall, createRuntimeHelpers } from './helpers/runtimeHelpers';
 
-export function hoistExports(program: ts.Program): ts.TransformerFactory<ts.SourceFile> {
-	const { target } = program.getCompilerOptions();
-	const constFlag =
-		target && target >= ts.ScriptTarget.ES2015 && target !== ts.ScriptTarget.JSON
-			? ts.NodeFlags.Const
-			: ts.NodeFlags.None;
+export function hoistExports(): ts.TransformerFactory<ts.SourceFile> {
 	return (ctx: ts.TransformationContext) => {
 		const { factory } = ctx;
+		const { target } = ctx.getCompilerOptions();
+		const constFlag =
+			target && target >= ts.ScriptTarget.ES2015 && target !== ts.ScriptTarget.JSON
+				? ts.NodeFlags.Const
+				: ts.NodeFlags.None;
+
 		let level = 0;
 		const exportsByLevel: ts.Statement[][] = [];
 		const moduleIntroByLevel: ts.Statement[][] = [];

@@ -1,4 +1,6 @@
 import * as chalk from 'chalk';
+import { promises as fs } from 'fs';
+import * as path from 'path';
 import { createGetCanonicalFileName } from 'typescript';
 import * as ts from 'typescript';
 
@@ -7,6 +9,27 @@ export function exit(exitCode: number): never {
 		console.log(chalk.red(`Process exiting with error code '${exitCode}'.`));
 	}
 	process.exit(exitCode);
+}
+
+// eslint-disable-next-line consistent-return
+export async function findConfigFile(initialDir: string): Promise<string> {
+	let currentDir = initialDir;
+	while (currentDir) {
+		const currentFileName = path.join(currentDir, 'tsconfig.json');
+		try {
+			await fs.access(currentFileName);
+			return currentFileName;
+		} catch (e) {
+			// ignore
+		}
+		const newDir = path.dirname(currentDir);
+		if (currentDir === newDir) {
+			break;
+		}
+		currentDir = newDir;
+	}
+	console.error('A tsconfig file was not found.');
+	exit(2);
 }
 
 export function formatDiagnostics(diagnostics: readonly ts.Diagnostic[], host?: ts.CompilerHost): string {

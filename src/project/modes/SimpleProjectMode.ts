@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as _rimraf from 'rimraf';
 import * as ts from 'typescript';
 import { promisify } from 'util';
+import { withMjsExtensionHack } from '../../mjsExtensionHack';
 import { exit, handleDiagnostics } from '../../util';
 import type { WrapperOptions } from '../compile';
 import { hoistExports } from '../transformers/hoistExports';
@@ -36,7 +37,7 @@ export class SimpleProjectMode implements ProjectMode {
 		}
 	}
 
-	async cleanAndInitCommonJs(): Promise<void> {
+	async cleanAndInitCommonJs(overrideOptions?: Partial<ts.CompilerOptions>): Promise<void> {
 		if (this._cjsCompilerHost || this._cjsProgram) {
 			throw new Error('invalid state: CJS host/program already initialized');
 		}
@@ -44,11 +45,13 @@ export class SimpleProjectMode implements ProjectMode {
 			await this._cleanCommonJs();
 		}
 		this._cjsCompilerHost = ts.createCompilerHost(this._tsConfig.options);
+		this._cjsCompilerHost.useSourceOfProjectReferenceRedirect = () => true;
 		this._cjsProgram = ts.createProgram({
-			options: this._tsConfig.options,
+			options: { ...this._tsConfig.options, ...overrideOptions },
 			configFileParsingDiagnostics: this._tsConfig.errors,
 			rootNames: this._tsConfig.fileNames,
-			host: this._cjsCompilerHost
+			host: this._cjsCompilerHost,
+			projectReferences: this._tsConfig.projectReferences
 		});
 	}
 
@@ -72,7 +75,7 @@ export class SimpleProjectMode implements ProjectMode {
 			useTransformers
 				? {
 						before: [splitEnumExports()],
-						after: [hoistExports(this._cjsProgram)],
+						after: [hoistExports()],
 						afterDeclarations: []
 				  }
 				: undefined
@@ -100,11 +103,13 @@ export class SimpleProjectMode implements ProjectMode {
 			noLib: true
 		};
 		this._esmCompilerHost = ts.createCompilerHost(esmOptions);
+		this._esmCompilerHost.useSourceOfProjectReferenceRedirect = () => true;
 		this._esmProgram = ts.createProgram({
 			options: esmOptions,
 			configFileParsingDiagnostics: this._tsConfig.errors,
 			rootNames: this._tsConfig.fileNames,
-			host: this._esmCompilerHost
+			host: this._esmCompilerHost,
+			projectReferences: this._tsConfig.projectReferences
 		});
 	}
 
@@ -113,25 +118,12 @@ export class SimpleProjectMode implements ProjectMode {
 			throw new Error('invalid state: ESM host/program not initialized');
 		}
 
-		// HACK: there's no API for this so we have to monkey patch a private TS  aPI
-		/* eslint-disable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any */
-		const origOutputPath: (fileName: string, host: unknown, extension: string) => string =
-			ts.getOwnEmitOutputFilePath;
-		(ts as any).getOwnEmitOutputFilePath = function getOwnEmitOutputFilePath(
-			fileName: string,
-			host: unknown,
-			extension: string
-		) {
-			const newExtension = extension === '.js' ? '.mjs' : extension;
-			return origOutputPath(fileName, host, newExtension);
-		};
-		const esmEmitResult = this._esmProgram.emit(undefined, undefined, this._cancellationToken, undefined, {
-			after: [resolveModulePaths()]
+		withMjsExtensionHack(() => {
+			const esmEmitResult = this._esmProgram!.emit(undefined, undefined, this._cancellationToken, undefined, {
+				after: [resolveModulePaths()]
+			});
+			handleDiagnostics(esmEmitResult.diagnostics, this._esmCompilerHost, 'Error emitting ES modules');
 		});
-		handleDiagnostics(esmEmitResult.diagnostics, this._esmCompilerHost, 'Error emitting ES modules');
-
-		(ts as any).getOwnEmitOutputFilePath = origOutputPath;
-		/* eslint-enable @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-explicit-any */
 	}
 
 	private async _cleanCommonJs(): Promise<void> {
