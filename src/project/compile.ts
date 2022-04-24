@@ -131,7 +131,7 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 				});
 			}
 
-			const cachedPrograms = new Set<ts.Program>();
+			const pathToReferences = new Map<string, readonly ts.ProjectReference[] | undefined>();
 
 			step('Checking & building changed projects for CJS', () => {
 				while (true) {
@@ -141,12 +141,16 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 						break;
 					}
 					if (proj.kind === ts.InvalidatedProjectKind.Build) {
+						const childConfigFilePath = proj.getCompilerOptions().configFilePath!;
 						const program = proj.getProgram();
 						if (program) {
-							cachedPrograms.add(program);
+							pathToReferences.set(childConfigFilePath, program.getProjectReferences());
 						} else {
-							console.log(`No program cached for ${proj.getCompilerOptions().configFilePath!}`);
+							console.log(`No program available for ${childConfigFilePath}`);
 						}
+
+						// linting goes here
+
 						proj.emit(
 							undefined,
 							undefined,
@@ -188,10 +192,7 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 					// ignore
 				}
 
-				for (const program of cachedPrograms) {
-					const compilerOptions = program.getCompilerOptions();
-					const projectReferences = program.getProjectReferences();
-					const tsConfigPath = compilerOptions.configFilePath!;
+				for (const [tsConfigPath, projectReferences] of pathToReferences) {
 					const programBaseFolder = path.dirname(tsConfigPath);
 					const programBaseFolderName = path.basename(programBaseFolder);
 					const cacheFolder = path.join(esmBootstrapParentPath, programBaseFolderName);
@@ -227,7 +228,7 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 				await fs.writeFile(esmParentTsConfigFileName, JSON.stringify(parentTsConfig), 'utf-8');
 			});
 
-			cachedPrograms.clear();
+			pathToReferences.clear();
 
 			const esmSolutionHost = ts.createSolutionBuilderHost();
 			const esmBuilder = ts.createSolutionBuilder(esmSolutionHost, [esmParentTsConfigFileName], {
