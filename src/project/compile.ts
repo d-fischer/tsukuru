@@ -185,11 +185,10 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 				}
 				await fs.mkdir(esmBootstrapParentPath, { recursive: true });
 
-				try {
-					const parentTsConfigContents = await fs.readFile(esmParentTsConfigFileName, 'utf-8');
+				const parentTsConfigFd = await fs.open(esmParentTsConfigFileName, 'w+');
+				const parentTsConfigContents = await parentTsConfigFd.readFile('utf-8');
+				if (parentTsConfigContents) {
 					parentTsConfig = JSON.parse(parentTsConfigContents) as RootTsConfig;
-				} catch (e) {
-					// ignore
 				}
 
 				for (const [tsConfigPath, projectReferences] of pathToReferences) {
@@ -208,7 +207,8 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 							module: 'esnext',
 							outDir: path.join(programBaseFolder, 'es'),
 							// avoid as many type checks as we can
-							skipLibCheck: true
+							skipLibCheck: true,
+							declarationMap: false
 						},
 						references: projectReferences?.map(ref => {
 							const refName = path.basename(ref.path);
@@ -225,7 +225,11 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 					await esmTsConfigFd.close();
 				}
 
-				await fs.writeFile(esmParentTsConfigFileName, JSON.stringify(parentTsConfig), 'utf-8');
+				const newRootContents = JSON.stringify(parentTsConfig);
+				if (newRootContents !== parentTsConfigContents) {
+					await parentTsConfigFd.writeFile(newRootContents, 'utf-8');
+				}
+				await parentTsConfigFd.close();
 			});
 
 			pathToReferences.clear();
