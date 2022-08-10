@@ -205,7 +205,7 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 						extends: tsConfigPath,
 						compilerOptions: {
 							module: 'esnext',
-							outDir: path.join(programBaseFolder, 'es'),
+							outDir: path.posix.join(programBaseFolder, 'es'),
 							// avoid as many type checks as we can
 							skipLibCheck: true,
 							declarationMap: false
@@ -215,7 +215,7 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 
 							return { path: path.join(esmBootstrapParentPath, refName) };
 						}),
-						include: [path.join(programBaseFolder, '**/*')]
+						include: [path.posix.join(programBaseFolder, '**/*')]
 					};
 					const result = JSON.stringify(esmTsConfig);
 					const fileContents = await esmTsConfigFd.readFile('utf-8');
