@@ -3,7 +3,7 @@ import * as ora from 'ora';
 import * as path from 'path';
 import * as ts from 'typescript';
 import { withMjsExtensionHack } from '../mjsExtensionHack';
-import { omit } from '../util';
+import { exit, handleDiagnostics, omit } from '../util';
 import type { ProjectMode } from './modes/ProjectMode';
 import { SimpleProjectMode } from './modes/SimpleProjectMode';
 import { parseConfig } from './parseConfig';
@@ -151,7 +151,7 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 
 						// linting goes here
 
-						proj.emit(
+						const emitResult = proj.emit(
 							undefined,
 							undefined,
 							renderHackCancellationToken,
@@ -164,6 +164,12 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 								  }
 								: undefined
 						);
+
+						if (!emitResult) {
+							console.error('Unknown error emitting CommonJS');
+							exit(1);
+						}
+						handleDiagnostics(emitResult.diagnostics, undefined, 'Error emitting CommonJS');
 					}
 					proj.done(renderHackCancellationToken);
 				}
