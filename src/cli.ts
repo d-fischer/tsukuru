@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { Command, flags } from '@oclif/command';
+import { Command, Flags } from '@oclif/core';
 import type { WrapperOptions } from './project/compile';
 import { compile } from './project/compile';
 import { exit, findConfigFile } from './util';
@@ -7,24 +7,24 @@ import { exit, findConfigFile } from './util';
 class Builder extends Command {
 	/* eslint-disable @typescript-eslint/naming-convention */
 	static flags = {
-		version: flags.version(),
-		help: flags.help(),
-		'config-file': flags.string({
+		version: Flags.version(),
+		help: Flags.help(),
+		'config-file': Flags.string({
 			char: 'c',
 			description: 'Path to a tsconfig.json file.'
 		}),
-		'no-cjs-root-export': flags.boolean({
+		'no-cjs-root-export': Flags.boolean({
 			char: 'R',
 			description: "Disable require('pkg') as a shortcut to the package's defaultr export"
 		}),
-		clean: flags.boolean({
+		clean: Flags.boolean({
 			description: 'Remove the output files before building'
 		})
 	};
 	/* eslint-enable @typescript-eslint/naming-convention */
 
 	async run(): Promise<void> {
-		const { flags: usedFlags } = this.parse(Builder);
+		const { flags: usedFlags } = await this.parse(Builder);
 		const configFilePath = usedFlags['config-file'] ?? (await findConfigFile(process.cwd()));
 		const options: WrapperOptions = {
 			useCjsTransformers: !usedFlags['no-cjs-root-export'],
