@@ -151,6 +151,8 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 
 						// linting goes here
 
+						const optionsDiagnostics = proj.getOptionsDiagnostics(renderHackCancellationToken);
+						handleDiagnostics(optionsDiagnostics, undefined, 'Error parsing config options');
 						const emitResult = proj.emit(
 							undefined,
 							undefined,
