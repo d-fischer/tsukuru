@@ -156,7 +156,7 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 							undefined,
 							renderHackCancellationToken
 						);
-						handleDiagnostics(optionsDiagnostics, undefined, 'Error parsing config options');
+						handleDiagnostics(optionsDiagnostics, undefined, 'Errors occurred before emitting');
 
 						const emitResult = proj.emit(
 							undefined,
