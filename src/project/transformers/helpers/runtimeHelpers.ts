@@ -35,8 +35,8 @@ export const createRuntimeHelpers = (factory: ts.NodeFactory, constFlag: ts.Node
 									undefined,
 									undefined,
 									[
-										factory.createParameterDeclaration(undefined, undefined, undefined, 'name'),
-										factory.createParameterDeclaration(undefined, undefined, undefined, 'def')
+										factory.createParameterDeclaration(undefined, undefined, 'name'),
+										factory.createParameterDeclaration(undefined, undefined, 'def')
 									],
 									undefined,
 									factory.createBlock(
@@ -113,7 +113,6 @@ export const createRuntimeHelpers = (factory: ts.NodeFactory, constFlag: ts.Node
 															undefined,
 															[
 																factory.createParameterDeclaration(
-																	undefined,
 																	undefined,
 																	undefined,
 																	'exp'

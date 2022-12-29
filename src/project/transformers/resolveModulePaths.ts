@@ -16,7 +16,6 @@ function readFile(fileName: string): string | undefined {
 function transformImportExportNodePath(factory: ts.NodeFactory, node: ts.Node, transformedPath: string) {
 	if (ts.isImportDeclaration(node)) {
 		return factory.createImportDeclaration(
-			node.decorators,
 			node.modifiers,
 			node.importClause,
 			factory.createStringLiteral(transformedPath)
@@ -25,7 +24,6 @@ function transformImportExportNodePath(factory: ts.NodeFactory, node: ts.Node, t
 
 	if (ts.isExportDeclaration(node)) {
 		return factory.createExportDeclaration(
-			node.decorators,
 			node.modifiers,
 			node.isTypeOnly,
 			node.exportClause,

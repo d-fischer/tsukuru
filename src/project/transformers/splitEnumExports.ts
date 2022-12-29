@@ -10,13 +10,11 @@ export function splitEnumExports(): ts.TransformerFactory<ts.SourceFile> {
 					const newModifiers = [...node.modifiers];
 					newModifiers.splice(exportIndex, 1);
 					const enumDeclaration = factory.createEnumDeclaration(
-						node.decorators,
 						factory.createNodeArray(newModifiers),
 						node.name,
 						node.members
 					);
 					const exportDeclaration = factory.createExportDeclaration(
-						undefined,
 						undefined,
 						false,
 						factory.createNamedExports([
