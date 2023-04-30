@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as _rimraf from 'rimraf';
 import * as ts from 'typescript';
 import { promisify } from 'util';
-import { withMjsExtensionHack } from '../../mjsExtensionHack';
+import { renameOutputFilesToMjs } from '../../mjsRename';
 import { exit, handleDiagnostics } from '../../util';
 import type { WrapperOptions } from '../compile';
 import { hoistExports } from '../transformers/hoistExports';
@@ -118,12 +118,15 @@ export class SimpleProjectMode implements ProjectMode {
 			throw new Error('invalid state: ESM host/program not initialized');
 		}
 
-		withMjsExtensionHack(() => {
-			const esmEmitResult = this._esmProgram!.emit(undefined, undefined, this._cancellationToken, undefined, {
-				after: [resolveModulePaths()]
-			});
-			handleDiagnostics(esmEmitResult.diagnostics, this._esmCompilerHost, 'Error emitting ES modules');
+		const esmEmitResult = this._esmProgram.emit(undefined, undefined, this._cancellationToken, undefined, {
+			after: [resolveModulePaths()]
 		});
+		handleDiagnostics(esmEmitResult.diagnostics, this._esmCompilerHost, 'Error emitting ES modules');
+	}
+
+	async renameEsmOutputs(): Promise<void> {
+		const configDir = path.dirname(this._tsConfigFilePath);
+		await renameOutputFilesToMjs(path.join(configDir, 'es'));
 	}
 
 	private async _cleanCommonJs(): Promise<void> {

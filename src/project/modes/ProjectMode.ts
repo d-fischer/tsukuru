@@ -8,4 +8,5 @@ export interface ProjectMode {
 
 	cleanAndInitEsm: () => void | Promise<void>;
 	emitEsm: () => void;
+	renameEsmOutputs: () => void | Promise<void>;
 }

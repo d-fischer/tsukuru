@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import * as ora from 'ora';
 import * as path from 'path';
 import * as ts from 'typescript';
-import { withMjsExtensionHack } from '../mjsExtensionHack';
+import { renameOutputFilesToMjs } from '../mjsRename';
 import { exit, handleDiagnostics, omit } from '../util';
 import type { ProjectMode } from './modes/ProjectMode';
 import { SimpleProjectMode } from './modes/SimpleProjectMode';
@@ -86,6 +86,10 @@ async function execByInterface(
 
 	step('Emitting ES Modules', () => {
 		project.emitEsm();
+	});
+
+	await stepAsync('Renaming ES module files to .mjs', async () => {
+		await project.renameEsmOutputs();
 	});
 }
 
@@ -245,8 +249,6 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 				await parentTsConfigFd.close();
 			});
 
-			pathToReferences.clear();
-
 			const esmSolutionHost = ts.createSolutionBuilderHost();
 			const esmBuilder = ts.createSolutionBuilder(esmSolutionHost, [esmParentTsConfigFileName], {
 				...omit(parsedConfig.options, ['tsConfigSourceFile']),
@@ -263,12 +265,20 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 				const customTransformers: ts.CustomTransformers = {
 					after: [resolveModulePaths()]
 				};
-
-				withMjsExtensionHack(() => {
-					// TODO build each project separately and handle diagnostics
-					esmBuilder.build(undefined, renderHackCancellationToken, undefined, () => customTransformers);
-				});
+				// TODO build each project separately and handle diagnostics
+				esmBuilder.build(undefined, renderHackCancellationToken, undefined, () => customTransformers);
 				esmBuilder.close();
+			});
+
+			await stepAsync('Renaming ES module files to .mjs', async () => {
+				await Promise.all(
+					[...pathToReferences.keys()].map(async tsConfigPath => {
+						const programBaseFolder = path.dirname(tsConfigPath);
+						const esOutput = path.posix.join(programBaseFolder, 'es');
+						await renameOutputFilesToMjs(esOutput);
+					})
+				);
+				pathToReferences.clear();
 			});
 		};
 	}

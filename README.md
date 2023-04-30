@@ -66,10 +66,10 @@ It utilizes custom TypeScript transformers to augment and rearrange the `module.
 so that you can use `require('pkg')` instead of `require('pkg').default`
 to access the default export of your package.
 
-The second build will create a ES Module version.
+The second build will create an ES Module version.
 It will overwrite some of your tsconfig.json configuration to ensure compatibility with ESM modules.
 It also utilizes another custom transformer to resolve the import paths because node doesn't do that by default.
-Lastly, it uses a hack to make TypeScript output .mjs files instead of .js.
+Lastly, it renames the .js output files to .mjs in order to enable module importing without weird package.json hacks.
 
 ## FAQ
 
