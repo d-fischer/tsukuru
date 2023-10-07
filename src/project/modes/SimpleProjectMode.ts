@@ -1,7 +1,6 @@
 import * as path from 'path';
-import * as _rimraf from 'rimraf';
+import { rimraf } from 'rimraf';
 import * as ts from 'typescript';
-import { promisify } from 'util';
 import { renameOutputFilesToMjs } from '../../mjsRename';
 import { exit, handleDiagnostics } from '../../util';
 import type { WrapperOptions } from '../compile';
@@ -9,8 +8,6 @@ import { hoistExports } from '../transformers/hoistExports';
 import { resolveModulePaths } from '../transformers/resolveModulePaths';
 import { splitEnumExports } from '../transformers/splitEnumExports';
 import type { ProjectMode } from './ProjectMode';
-
-const rimraf = promisify(_rimraf);
 
 export class SimpleProjectMode implements ProjectMode {
 	private _cjsCompilerHost?: ts.CompilerHost;
