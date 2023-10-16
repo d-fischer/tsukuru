@@ -1,7 +1,6 @@
+import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as _rimraf from 'rimraf';
 import * as ts from 'typescript';
-import { promisify } from 'util';
 import { renameOutputFilesToMjs } from '../../mjsRename';
 import { exit, handleDiagnostics } from '../../util';
 import type { WrapperOptions } from '../compile';
@@ -9,8 +8,6 @@ import { hoistExports } from '../transformers/hoistExports';
 import { resolveModulePaths } from '../transformers/resolveModulePaths';
 import { splitEnumExports } from '../transformers/splitEnumExports';
 import type { ProjectMode } from './ProjectMode';
-
-const rimraf = promisify(_rimraf);
 
 export class SimpleProjectMode implements ProjectMode {
 	private _cjsCompilerHost?: ts.CompilerHost;
@@ -133,12 +130,12 @@ export class SimpleProjectMode implements ProjectMode {
 		const configDir = path.dirname(this._tsConfigFilePath);
 		const { outDir } = this._tsConfig.options;
 		if (outDir) {
-			await rimraf(path.resolve(configDir, outDir));
+			await fs.rm(path.resolve(configDir, outDir), { force: true, recursive: true });
 		}
 	}
 
 	private async _cleanEsm(): Promise<void> {
 		const configDir = path.dirname(this._tsConfigFilePath);
-		await rimraf(path.join(configDir, 'es'));
+		await fs.rm(path.join(configDir, 'es'), { force: true, recursive: true });
 	}
 }
