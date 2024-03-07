@@ -118,7 +118,8 @@ export function hoistExports(): ts.TransformerFactory<ts.SourceFile> {
 							const currentIndex = index++;
 							if (currentIndex === 0) {
 								return [createRuntimeHelpers(factory, constFlag), _node];
-							} else if (currentIndex === (result as ts.SourceFile).statements.length - 1) {
+							}
+							if (currentIndex === (result as ts.SourceFile).statements.length - 1) {
 								return [
 									_node,
 									...addedModuleIntro,
@@ -193,7 +194,8 @@ export function hoistExports(): ts.TransformerFactory<ts.SourceFile> {
 						addExport(defaultExport);
 
 						return creation ? [creation, defaultExport] : defaultExport;
-					} else if (!isVoidExportInitializer(result.expression)) {
+					}
+					if (!isVoidExportInitializer(result.expression)) {
 						if (canHoistCreation(result.expression.right)) {
 							addExport(result);
 						} else {

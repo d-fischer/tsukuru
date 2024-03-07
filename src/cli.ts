@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { Command, Flags } from '@oclif/core';
-import type { WrapperOptions } from './project/compile';
-import { compile } from './project/compile';
+import { compile, type WrapperOptions } from './project/compile';
 import { exit, findConfigFile } from './util';
 
 class Builder extends Command {
@@ -36,4 +35,4 @@ class Builder extends Command {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports,@typescript-eslint/no-var-requires
-(Builder.run() as Promise<void>).catch(require('@oclif/errors/handle'));
+void (Builder.run() as Promise<void>).catch(require('@oclif/errors/handle'));

@@ -35,7 +35,7 @@ export class SimpleProjectMode implements ProjectMode {
 	}
 
 	async cleanAndInitCommonJs(overrideOptions?: Partial<ts.CompilerOptions>): Promise<void> {
-		if (this._cjsCompilerHost || this._cjsProgram) {
+		if (this._cjsCompilerHost ?? this._cjsProgram) {
 			throw new Error('invalid state: CJS host/program already initialized');
 		}
 		if (this._config.shouldClean) {
@@ -81,7 +81,7 @@ export class SimpleProjectMode implements ProjectMode {
 	}
 
 	async cleanAndInitEsm(): Promise<void> {
-		if (this._esmCompilerHost || this._esmProgram) {
+		if (this._esmCompilerHost ?? this._esmProgram) {
 			throw new Error('invalid state: ESM host/program already initialized');
 		}
 
