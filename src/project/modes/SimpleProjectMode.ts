@@ -74,7 +74,7 @@ export class SimpleProjectMode implements ProjectMode {
 						before: [splitEnumExports()],
 						after: [hoistExports()],
 						afterDeclarations: []
-				  }
+					}
 				: undefined
 		);
 		handleDiagnostics(cjsEmitResult.diagnostics, this._cjsCompilerHost, 'Error emitting CommonJS');

@@ -172,7 +172,7 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 										before: [splitEnumExports()],
 										after: [hoistExports()],
 										afterDeclarations: []
-								  }
+									}
 								: undefined
 						);
 

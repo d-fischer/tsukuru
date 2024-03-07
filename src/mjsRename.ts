@@ -26,9 +26,7 @@ async function gatherFilesToRename(directory: string, result: RenameTask[] = [])
 
 export async function renameOutputFilesToMjs(directory: string): Promise<void> {
 	await Promise.all(
-		(
-			await gatherFilesToRename(directory)
-		).map(async ({ oldPath, newPath }) => {
+		(await gatherFilesToRename(directory)).map(async ({ oldPath, newPath }) => {
 			await fs.rename(oldPath, newPath);
 		})
 	);

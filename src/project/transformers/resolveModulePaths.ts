@@ -50,7 +50,7 @@ function getNodeImportPath(node: ts.Node) {
 	}
 
 	if (isDynamicImport(node)) {
-		const importArg = node.arguments[0];
+		const [importArg] = node.arguments;
 		if (ts.isStringLiteral(importArg)) {
 			return importArg.text;
 		}

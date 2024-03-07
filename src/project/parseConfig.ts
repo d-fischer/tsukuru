@@ -19,7 +19,7 @@ export function parseConfig(configFilePath: string, baseOptions: ts.CompilerOpti
 	// from here https://github.com/Microsoft/TypeScript/blob/6fb0f6818ad48bf4f685e86c03405ddc84b530ed/src/compiler/program.ts#L2812
 	const configParsingHost: ts.ParseConfigFileHost = {
 		fileExists: f => tempCompilerHost.fileExists(f),
-		readDirectory: (root, extensions, includes, depth?) =>
+		readDirectory: (root, extensions, includes, depth) =>
 			tempCompilerHost.readDirectory ? tempCompilerHost.readDirectory(root, extensions, includes, depth) : [],
 		readFile: f => tempCompilerHost.readFile(f),
 		useCaseSensitiveFileNames: tempCompilerHost.useCaseSensitiveFileNames(),
