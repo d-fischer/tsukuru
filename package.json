@@ -32,7 +32,7 @@
     "chalk": "^4.1.0",
     "ora": "^5.1.0",
     "toposort": "^2.0.2",
-    "tslib": "^2.0.3"
+    "tslib": "^2.6.2"
   },
   "peerDependencies": {
     "typescript": ">=4.8.2 <5.5"
@@ -42,8 +42,8 @@
     "@types/ts-expose-internals": "npm:ts-expose-internals@4.9.4",
     "eslint": "^8.57.0",
     "husky": "^4.3.0",
-    "lint-staged": "^11.1.2",
-    "prettier": "^2.1.2",
+    "lint-staged": "^15.2.2",
+    "prettier": "^3.2.5",
     "typescript": "~5.4.2"
   },
   "files": [
