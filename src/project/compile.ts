@@ -198,7 +198,7 @@ export async function compile(configFilePath: string, options: WrapperOptions): 
 				};
 
 				if (options.shouldClean) {
-					await fs.rm(esmBootstrapParentPath, { recursive: true });
+					await fs.rm(esmBootstrapParentPath, { recursive: true, force: true });
 				}
 				await fs.mkdir(esmBootstrapParentPath, { recursive: true });
 
